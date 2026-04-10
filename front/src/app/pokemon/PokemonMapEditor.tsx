@@ -381,6 +381,8 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [jsonMode, setJsonMode] = useState(false);
+  const [jsonText, setJsonText] = useState("");
 
   const [selectedDesk, setSelectedDesk] = useState<number | null>(null);
   const [selectedStair, setSelectedStair] = useState<number | null>(null);
@@ -948,6 +950,20 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-foreground">Editer la map</h3>
         <div className="flex items-center gap-2">
+          <div className="flex rounded-md border border-border overflow-hidden text-xs">
+            <button
+              onClick={() => setJsonMode(false)}
+              className={`px-3 py-1.5 transition-colors ${!jsonMode ? "bg-brand text-white" : "text-muted hover:bg-soft/60 hover:text-foreground"}`}
+            >
+              Mode Visuel
+            </button>
+            <button
+              onClick={() => { setJsonText(JSON.stringify(config, null, 2)); setJsonMode(true); }}
+              className={`px-3 py-1.5 transition-colors ${jsonMode ? "bg-brand text-white" : "text-muted hover:bg-soft/60 hover:text-foreground"}`}
+            >
+              Mode JSON
+            </button>
+          </div>
           <button
             onClick={handleImport}
             className="rounded-md border border-border px-3 py-1.5 text-xs text-muted hover:bg-soft/60 hover:text-foreground"
@@ -983,9 +999,46 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
         </div>
       </div>
 
+      {/* JSON mode */}
+      {jsonMode && (
+        <div className="space-y-2">
+          <textarea
+            className="w-full rounded-md border border-border bg-white font-mono text-xs p-3 resize-y min-h-96 focus:outline-none focus:ring-1 focus:ring-border"
+            value={jsonText}
+            onChange={(e) => setJsonText(e.target.value)}
+            spellCheck={false}
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                try {
+                  const parsed = JSON.parse(jsonText) as PokemonConfig;
+                  setConfig(parsed);
+                  setCurrentRoomId(parsed.defaultRoomId);
+                  setJsonMode(false);
+                  setError(null);
+                } catch {
+                  setError("JSON invalide.");
+                }
+              }}
+              className="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors"
+            >
+              Appliquer
+            </button>
+            <button
+              onClick={() => setJsonMode(false)}
+              className="rounded-md border border-border px-4 py-1.5 text-xs text-muted hover:bg-soft/60 hover:text-foreground"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!jsonMode && <>
       {/* Room selector */}
       {roomIds.length > 1 && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-foreground">Salle :</span>
           <div className="flex gap-1.5">
             {roomIds.map((id) => (
@@ -998,33 +1051,28 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Room label editor */}
-      {room && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted">Nom de la salle :</span>
-          <input
-            type="text"
-            value={room.label ?? ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              setConfig((prev) => {
-                if (!prev) return prev;
-                return {
-                  ...prev,
-                  rooms: {
-                    ...prev.rooms,
-                    [currentRoomId]: { ...prev.rooms[currentRoomId]!, label: val },
-                  },
-                };
-              });
-              setSuccess(false);
-            }}
-            className="rounded border border-border bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder={currentRoomId}
-          />
+          {room && (
+            <input
+              type="text"
+              value={room.label ?? ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setConfig((prev) => {
+                  if (!prev) return prev;
+                  return {
+                    ...prev,
+                    rooms: {
+                      ...prev.rooms,
+                      [currentRoomId]: { ...prev.rooms[currentRoomId]!, label: val },
+                    },
+                  };
+                });
+                setSuccess(false);
+              }}
+              className="rounded border border-border bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder={currentRoomId}
+            />
+          )}
         </div>
       )}
 
@@ -1050,7 +1098,7 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
       </div>
 
       {/* Canvas */}
-      <div className="relative w-full rounded-lg overflow-hidden border border-border bg-[#86efac]">
+      <div className="relative w-full overflow-hidden">
         <canvas
           ref={canvasRef}
           className={`w-full block select-none ${pendingTile ? "cursor-cell" : "cursor-crosshair"}`}
@@ -1106,6 +1154,7 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
           Configuration sauvegardée. La map a été mise à jour.
         </div>
       )}
+      </>}
     </div>
   );
 }
