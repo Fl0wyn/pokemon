@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import passport from "passport";
 
 import * as passportConfig from "./config/passport";
@@ -13,6 +13,7 @@ import { microsoftStatus } from "./controllers/auth/microsoftStatus";
 
 import { getImage } from "./controllers/data/getImage";
 
+import { deletePokemonConfig } from "./controllers/pokemon/deletePokemonConfig";
 import { getPokemonConfig } from "./controllers/pokemon/getPokemonConfig";
 import { putPokemonConfig } from "./controllers/pokemon/putPokemonConfig";
 
@@ -57,10 +58,6 @@ export class Router {
   constructor({ main }: router_cons_type) {
     passportConfig.basic();
 
-    const requireLogin = passport.authenticate("local", {
-      session: false,
-    });
-
     this.requireAuth = passport.authenticate("jwt", {
       session: false,
     });
@@ -87,6 +84,7 @@ export class Router {
     this.apiRoutes.use("/pokemon", pokemonRoutes);
     pokemonRoutes.get("/config", this.requireAuth, getPokemonConfig);
     pokemonRoutes.put("/config", this.requireAuth, putPokemonConfig);
+    pokemonRoutes.delete("/config", this.requireAuth, deletePokemonConfig);
 
     // Users
     const userRoutes = express.Router();

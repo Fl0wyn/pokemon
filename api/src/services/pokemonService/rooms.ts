@@ -350,6 +350,10 @@ export function getRawPokemonConfig(): RawConfig {
   return _raw;
 }
 
+export async function resetPokemonConfig(): Promise<Record<string, { x: number; z: number }>> {
+  return savePokemonConfig(_jsonSeed!);
+}
+
 /**
  * Validates, persists to DB, and reloads in-memory state.
  * Returns a map of roomId → old spawn position for rooms whose spawn changed.

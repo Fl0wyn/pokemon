@@ -164,28 +164,28 @@ function makeFallbackTexture(userId: string, email: string): THREE.CanvasTexture
 
 const WALL_HEIGHT = 2.4;
 
+const FLOOR_EXTRA_BOTTOM = 2; // extra world units shown below the map boundary
+
 function resizeFloor(
   floor: THREE.Mesh,
   bounds: RoomBounds,
   walls: [THREE.Mesh, THREE.Mesh, THREE.Mesh, THREE.Mesh],
 ) {
   const hw = bounds.halfW * 2;
-  const hd = bounds.halfD * 2;
+  const hd = bounds.halfD * 2 + FLOOR_EXTRA_BOTTOM;
+  const offsetZ = FLOOR_EXTRA_BOTTOM / 2;
   floor.geometry.dispose();
   floor.geometry = new THREE.PlaneGeometry(hw, hd);
+  floor.position.set(0, 0, offsetZ);
   const mat = floor.material as THREE.MeshBasicMaterial;
   if (mat.map) {
-    // 1 tile = 1 world unit, so repeat = room size in units
-    mat.map.repeat.set(hw, hd);
+    mat.map.repeat.set(bounds.halfW * 2, bounds.halfD * 2 + FLOOR_EXTRA_BOTTOM);
     mat.map.needsUpdate = true;
   }
 
-  // Mur Nord (+Z)
-  walls[0].geometry.dispose();
-  walls[0].geometry = new THREE.PlaneGeometry(hw, WALL_HEIGHT);
-  walls[0].position.set(0, WALL_HEIGHT / 2, bounds.halfD);
-  walls[0].rotation.y = Math.PI;
-  // Mur Sud (-Z)
+  // Pas de mur en bas — la zone extra est ouverte
+  walls[0].visible = false;
+  // Mur Sud (haut, -Z)
   walls[1].geometry.dispose();
   walls[1].geometry = new THREE.PlaneGeometry(hw, WALL_HEIGHT);
   walls[1].position.set(0, WALL_HEIGHT / 2, -bounds.halfD);
@@ -193,12 +193,12 @@ function resizeFloor(
   // Mur Est (+X)
   walls[2].geometry.dispose();
   walls[2].geometry = new THREE.PlaneGeometry(hd, WALL_HEIGHT);
-  walls[2].position.set(bounds.halfW, WALL_HEIGHT / 2, 0);
+  walls[2].position.set(bounds.halfW, WALL_HEIGHT / 2, offsetZ);
   walls[2].rotation.y = -Math.PI / 2;
   // Mur Ouest (-X)
   walls[3].geometry.dispose();
   walls[3].geometry = new THREE.PlaneGeometry(hd, WALL_HEIGHT);
-  walls[3].position.set(-bounds.halfW, WALL_HEIGHT / 2, 0);
+  walls[3].position.set(-bounds.halfW, WALL_HEIGHT / 2, offsetZ);
   walls[3].rotation.y = Math.PI / 2;
 }
 
@@ -333,10 +333,11 @@ export default function PokemonCanvas() {
 
     const b0 = boundsRef.current;
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(b0.halfW * 2, b0.halfD * 2),
-      new THREE.MeshBasicMaterial(),
+      new THREE.PlaneGeometry(b0.halfW * 2, b0.halfD * 2 + FLOOR_EXTRA_BOTTOM),
+      new THREE.MeshBasicMaterial({ color: 0xf1f5f9 }),
     );
     floor.rotation.x = -Math.PI / 2;
+    floor.position.set(0, 0, FLOOR_EXTRA_BOTTOM / 2);
     scene.add(floor);
 
     const wallMat = new THREE.MeshStandardMaterial({ color: 0xe8e0d4, roughness: 0.85, metalness: 0, side: THREE.FrontSide });
@@ -362,7 +363,8 @@ export default function PokemonCanvas() {
       t.colorSpace = THREE.SRGBColorSpace;
       t.wrapS = THREE.RepeatWrapping;
       t.wrapT = THREE.RepeatWrapping;
-      t.repeat.set(b0.halfW * 2, b0.halfD * 2);
+      t.repeat.set(b0.halfW * 2, b0.halfD * 2 + FLOOR_EXTRA_BOTTOM);
+      resizeFloor(floor, b0, walls);
       t.needsUpdate = true;
       (floor.material as THREE.MeshBasicMaterial).map = t;
       (floor.material as THREE.MeshBasicMaterial).needsUpdate = true;
@@ -496,7 +498,7 @@ export default function PokemonCanvas() {
         /* ignore */
       }
       boundsRef.current = payload.bounds;
-      setMapAspect((payload.bounds.halfW * 2 + 1.6) / (payload.bounds.halfD * 2 + 1.6));
+      setMapAspect((payload.bounds.halfW * 2 + 1.6) / (payload.bounds.halfD * 2 + 1.6 + FLOOR_EXTRA_BOTTOM));
       localPos.x = payload.x;
       localPos.z = payload.z;
       resizeFloor(floor,payload.bounds, walls);
@@ -516,7 +518,7 @@ export default function PokemonCanvas() {
       if (disposed) return;
       if (payload.roomId !== roomIdRef.current) return;
       boundsRef.current = payload.bounds;
-      setMapAspect((payload.bounds.halfW * 2 + 1.6) / (payload.bounds.halfD * 2 + 1.6));
+      setMapAspect((payload.bounds.halfW * 2 + 1.6) / (payload.bounds.halfD * 2 + 1.6 + FLOOR_EXTRA_BOTTOM));
       resizeFloor(floor,payload.bounds, walls);
       buildRoomScene(payload.scene);
       resize();
@@ -558,15 +560,18 @@ export default function PokemonCanvas() {
       const aspect = w / h;
       const b = boundsRef.current;
       const padding = 0.8;
+      const extraBottom = FLOOR_EXTRA_BOTTOM;
       const roomWidth = b.halfW * 2 + padding * 2;
-      const roomHeight = b.halfD * 2 + padding * 2;
-      // Fit both dimensions in frame: keep full 20m width visible even on narrow layouts.
+      const roomHeight = b.halfD * 2 + padding * 2 + extraBottom;
+      // Fit both dimensions in frame: keep full width visible even on narrow layouts.
       const viewH = Math.max(roomHeight, roomWidth / Math.max(aspect, 0.01));
       const viewW = viewH * aspect;
+      // Shift camera down by half of extraBottom so the extra space is only at the bottom.
+      const offsetZ = extraBottom / 2;
       camera.left = -viewW / 2;
       camera.right = viewW / 2;
-      camera.top = viewH / 2;
-      camera.bottom = -viewH / 2;
+      camera.top = viewH / 2 - offsetZ;
+      camera.bottom = -viewH / 2 - offsetZ;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
@@ -704,6 +709,7 @@ export default function PokemonCanvas() {
       const bounds = boundsRef.current;
       const hw = bounds.halfW;
       const hd = bounds.halfD;
+      const hdExt = hd + FLOOR_EXTRA_BOTTOM;
 
       let dx = 0;
       let dz = 0;
@@ -720,7 +726,7 @@ export default function PokemonCanvas() {
         localPos.z += dz * MOVE_SPEED * dt;
         const r = AVATAR_RADIUS;
         localPos.x = Math.min(hw - r, Math.max(-hw + r, localPos.x));
-        localPos.z = Math.min(hd - r, Math.max(-hd + r, localPos.z));
+        localPos.z = Math.min(hdExt - r, Math.max(-hd + r, localPos.z));
         const resolved = resolveCircleAgainstAabbs(
           localPos.x,
           localPos.z,
@@ -728,7 +734,7 @@ export default function PokemonCanvas() {
           deskAabbs,
         );
         localPos.x = Math.min(hw - r, Math.max(-hw + r, resolved.x));
-        localPos.z = Math.min(hd - r, Math.max(-hd + r, resolved.z));
+        localPos.z = Math.min(hdExt - r, Math.max(-hd + r, resolved.z));
 
         // Stair trigger: player is near a stair and pressed against its wall
         if (socket.connected) {
@@ -847,17 +853,6 @@ export default function PokemonCanvas() {
 
   return (
     <div className="space-y-4">
-      {isAdmin && !editingMap && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => setEditingMap(true)}
-            className="rounded-md border border-border px-3 py-1.5 text-xs text-muted hover:bg-soft/60 hover:text-foreground"
-          >
-            Editer la map
-          </button>
-        </div>
-      )}
-
       {!editingMap && (
         <div className="relative">
           <div
@@ -865,7 +860,6 @@ export default function PokemonCanvas() {
             className="w-full cursor-crosshair overflow-hidden rounded-xl border border-border"
             style={mapAspect ? { aspectRatio: String(mapAspect) } : { aspectRatio: "2/1", minHeight: "24rem" }}
           />
-
         </div>
       )}
 
@@ -879,12 +873,22 @@ export default function PokemonCanvas() {
       {/* Pokédex button */}
       {!editingMap && <div className="flex justify-between items-center">
         <h3 className="text-sm font-semibold text-foreground">Hall of fame</h3>
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="rounded-md border border-border px-3 py-1.5 text-xs text-muted hover:bg-soft/60 hover:text-foreground"
-        >
-          Mon Pokédex ({myScore}/{MONSTER_TOTAL})
-        </button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => setEditingMap(true)}
+              className="rounded-md border border-border px-3 py-1.5 text-xs text-muted hover:bg-soft/60 hover:text-foreground"
+            >
+              Editer la map
+            </button>
+          )}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-muted hover:bg-soft/60 hover:text-foreground"
+          >
+            Mon Pokédex ({myScore}/{MONSTER_TOTAL})
+          </button>
+        </div>
       </div>}
 
       {!editingMap && <div className="rounded-xl border border-border bg-soft/30 p-3">
@@ -957,7 +961,7 @@ export default function PokemonCanvas() {
                         className="w-12 h-12 object-contain"
                         style={{ filter: caught ? "none" : "grayscale(1)" }}
                       />
-                      <span className="mt-1 text-center text-[10px] leading-tight text-foreground break-words w-full text-center">
+                      <span className="mt-1 text-center text-[10px] leading-tight text-foreground wrap-break-word w-full">
                         {name}
                       </span>
                       {count > 1 && (

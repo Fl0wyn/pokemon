@@ -180,6 +180,8 @@ function snapAxis(v: number, size: number): number {
   return size % 2 === 0 ? Math.round(v) : Math.floor(v) + 0.5;
 }
 
+const EDITOR_EXTRA_BOTTOM = 2;
+
 function worldToCanvas(
   wx: number,
   wz: number,
@@ -188,8 +190,9 @@ function worldToCanvas(
   canvasW: number,
   canvasH: number,
 ): { cx: number; cy: number } {
+  const totalH = halfD * 2 + EDITOR_EXTRA_BOTTOM;
   const px = (wx + halfW) / (halfW * 2);
-  const py = (wz + halfD) / (halfD * 2);
+  const py = (wz + halfD) / totalH;
   return { cx: px * canvasW, cy: py * canvasH };
 }
 
@@ -201,9 +204,10 @@ function canvasToWorld(
   canvasW: number,
   canvasH: number,
 ): { wx: number; wz: number } {
+  const totalH = halfD * 2 + EDITOR_EXTRA_BOTTOM;
   return {
     wx: (cx / canvasW) * halfW * 2 - halfW,
-    wz: (cy / canvasH) * halfD * 2 - halfD,
+    wz: (cy / canvasH) * totalH - halfD,
   };
 }
 
@@ -247,25 +251,15 @@ function drawRoom(
     worldToCanvas(wx, wz, halfW, halfD, canvasW, canvasH);
 
   // cell size in pixels for 1 world unit
+  const totalRows = halfD * 2 + EDITOR_EXTRA_BOTTOM;
   const cellW = canvasW / (halfW * 2);
-  const cellH = canvasH / (halfD * 2);
+  const cellH = canvasH / totalRows;
 
-  // background — grass grid (one tile per world unit)
-  for (let col = 0; col < halfW * 2; col++) {
-    for (let row = 0; row < halfD * 2; row++) {
-      const px = col * cellW;
-      const py = row * cellH;
-      const grassImg = tileImgs["grass"];
-      if (grassImg) {
-        ctx.drawImage(grassImg, px, py, cellW, cellH);
-      } else {
-        ctx.fillStyle = "#86efac";
-        ctx.fillRect(px, py, cellW, cellH);
-      }
-    }
-  }
+  // background — plain grey
+  ctx.fillStyle = "#f1f5f9";
+  ctx.fillRect(0, 0, canvasW, canvasH);
 
-  // room border
+  // outer border
   ctx.strokeStyle = "#64748b";
   ctx.lineWidth = 2;
   ctx.strokeRect(1, 1, canvasW - 2, canvasH - 2);
@@ -384,6 +378,7 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
   const [currentRoomId, setCurrentRoomId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -487,14 +482,14 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
     if (!c || !room) return;
     const observer = new ResizeObserver(() => {
       const rect = c.getBoundingClientRect();
-      const aspect = (room.halfW * 2) / (room.halfD * 2);
+      const aspect = (room.halfW * 2) / (room.halfD * 2 + EDITOR_EXTRA_BOTTOM);
       c.width = Math.round(rect.width);
       c.height = Math.round(rect.width / aspect);
       render();
     });
     observer.observe(c);
     const rect = c.getBoundingClientRect();
-    const aspect = (room.halfW * 2) / (room.halfD * 2);
+    const aspect = (room.halfW * 2) / (room.halfD * 2 + EDITOR_EXTRA_BOTTOM);
     c.width = Math.round(rect.width || 600);
     c.height = Math.round((rect.width || 600) / aspect);
     render();
@@ -593,16 +588,18 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
       // clamp inside room
       if (target.type === "desk") {
         const d = room.objects[target.idx]!;
+        const maxZ = room.halfD + EDITOR_EXTRA_BOTTOM - d.depth / 2;
         nx = Math.max(-room.halfW + d.width / 2, Math.min(room.halfW - d.width / 2, nx));
-        nz = Math.max(-room.halfD + d.depth / 2, Math.min(room.halfD - d.depth / 2, nz));
+        nz = Math.max(-room.halfD + d.depth / 2, Math.min(maxZ, nz));
       } else if (target.type === "stair") {
         const st = room.stairs[target.idx]!;
+        const maxZ = room.halfD + EDITOR_EXTRA_BOTTOM - st.depth / 2;
         nx = Math.max(-room.halfW + st.width / 2, Math.min(room.halfW - st.width / 2, nx));
-        nz = Math.max(-room.halfD + st.depth / 2, Math.min(room.halfD - st.depth / 2, nz));
+        nz = Math.max(-room.halfD + st.depth / 2, Math.min(maxZ, nz));
       } else {
         // spawn or stair-spawn — clamp with small margin inside current room
         nx = Math.max(-room.halfW + 0.3, Math.min(room.halfW - 0.3, nx));
-        nz = Math.max(-room.halfD + 0.3, Math.min(room.halfD - 0.3, nz));
+        nz = Math.max(-room.halfD + 0.3, Math.min(room.halfD + EDITOR_EXTRA_BOTTOM - 0.3, nz));
       }
       setDragPreview({ x: nx, z: nz });
     } else {
@@ -887,6 +884,28 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
     input.click();
   }
 
+  function handleReset() {
+    if (!window.confirm("Remettre les deux maps à zéro ?")) return;
+    setError(null);
+    setSuccess(false);
+    setResetting(true);
+    const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
+    if (!token) { setError("Non authentifié."); setResetting(false); return; }
+    axiosInstance
+      .delete("/pokemon/config", { headers: { Authorization: token } })
+      .then(() => axiosInstance.get<PokemonConfig>("/pokemon/config", { headers: { Authorization: token } }))
+      .then((r) => {
+        setConfig(r.data);
+        setCurrentRoomId(r.data.defaultRoomId);
+        setResetting(false);
+        onSaved?.();
+      })
+      .catch((e) => {
+        setError(e?.response?.data?.error ?? e.message ?? "Erreur de reset.");
+        setResetting(false);
+      });
+  }
+
   function handleSave() {
     if (!config) return;
     setError(null);
@@ -942,8 +961,15 @@ export function PokemonMapEditor({ onClose, onSaved }: Props) {
             Exporter
           </button>
           <button
+            onClick={handleReset}
+            disabled={resetting || saving}
+            className="rounded-md border border-red-200 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 hover:text-red-700 disabled:opacity-50 transition-colors"
+          >
+            {resetting ? "Reset…" : "Reset"}
+          </button>
+          <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || resetting}
             className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-50 transition-colors"
           >
             {saving ? "Sauvegarde…" : "Sauvegarder"}

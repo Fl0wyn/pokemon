@@ -7,12 +7,12 @@
   --color-brand-active: #475569;
 
   /* Sidebar */
-  --color-sidebar:        #0f1117;
+  --color-sidebar:        #252840;
   --color-sidebar-hover:  #1e1f2e;
   --color-sidebar-active: #6366f1;
   --color-sidebar-icon:   #818cf8;
   --color-sidebar-text:   #94a3b8;
-  --color-sidebar-label:  #4b5563;
+  --color-sidebar-label:  #6366f1;
   --color-sidebar-sep:    #1e2030;
 
   /* Surfaces */

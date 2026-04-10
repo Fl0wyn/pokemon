@@ -33,6 +33,7 @@ import { generateEggSvg } from "./eggGeneratorService";
 import { randomMonsterName } from "./monsterGeneratorService";
 
 const AVATAR_RADIUS = 0.3;
+const EXTRA_BOTTOM = 2; // extra rows visible/walkable below the map boundary
 const EGG_RESPAWN_MS = 5000;
 const EGG_PICK_RADIUS = 1.1;
 const EGG_RADIUS = 0.35;
@@ -349,7 +350,7 @@ class PokemonService implements UserSocketExtension {
     const r = AVATAR_RADIUS;
     return {
       x: Math.min(def.halfW - r, Math.max(-def.halfW + r, x)),
-      z: Math.min(def.halfD - r, Math.max(-def.halfD + r, z)),
+      z: Math.min(def.halfD + EXTRA_BOTTOM - r, Math.max(-def.halfD + r, z)),
     };
   }
 
