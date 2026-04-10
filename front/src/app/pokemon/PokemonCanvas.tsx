@@ -224,6 +224,7 @@ export default function PokemonCanvas() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingMap, setEditingMap] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [mapAspect, setMapAspect] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const meRef = useRef<{ id: string; email: string; previewKey: string | null }>({
     id: "",
@@ -495,6 +496,7 @@ export default function PokemonCanvas() {
         /* ignore */
       }
       boundsRef.current = payload.bounds;
+      setMapAspect((payload.bounds.halfW * 2 + 1.6) / (payload.bounds.halfD * 2 + 1.6));
       localPos.x = payload.x;
       localPos.z = payload.z;
       resizeFloor(floor,payload.bounds, walls);
@@ -514,6 +516,7 @@ export default function PokemonCanvas() {
       if (disposed) return;
       if (payload.roomId !== roomIdRef.current) return;
       boundsRef.current = payload.bounds;
+      setMapAspect((payload.bounds.halfW * 2 + 1.6) / (payload.bounds.halfD * 2 + 1.6));
       resizeFloor(floor,payload.bounds, walls);
       buildRoomScene(payload.scene);
       resize();
@@ -859,7 +862,8 @@ export default function PokemonCanvas() {
         <div className="relative">
           <div
             ref={containerRef}
-            className="aspect-2/1 w-full min-h-96 cursor-crosshair overflow-hidden rounded-xl border border-border bg-soft/30"
+            className="w-full cursor-crosshair overflow-hidden rounded-xl border border-border"
+            style={mapAspect ? { aspectRatio: String(mapAspect) } : { aspectRatio: "2/1", minHeight: "24rem" }}
           />
 
         </div>

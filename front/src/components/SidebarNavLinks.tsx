@@ -43,7 +43,7 @@ export function SidebarNavLinks({
           className="flex items-center gap-2.5 px-4 py-4 no-underline border-b border-sidebar-sep/50"
         >
           <span className="text-sm font-bold text-white tracking-wide">Acs2i</span>
-          <span className="text-sm font-light text-sidebar-text">Game</span>
+          <span className="text-sm font-light text-indigo-400">Game</span>
         </Link>
       ) : null}
 

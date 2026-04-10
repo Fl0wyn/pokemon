@@ -7,13 +7,13 @@
   --color-brand-active: #475569;
 
   /* Sidebar */
-  --color-sidebar:        #3b82f6;
-  --color-sidebar-hover:  #2563eb;
-  --color-sidebar-active: #1e3a5f;
-  --color-sidebar-icon:   #bfdbfe;
-  --color-sidebar-text:   #ffffff;
-  --color-sidebar-label:  #93c5fd;
-  --color-sidebar-sep:    #60a5fa;
+  --color-sidebar:        #0f1117;
+  --color-sidebar-hover:  #1e1f2e;
+  --color-sidebar-active: #6366f1;
+  --color-sidebar-icon:   #818cf8;
+  --color-sidebar-text:   #94a3b8;
+  --color-sidebar-label:  #4b5563;
+  --color-sidebar-sep:    #1e2030;
 
   /* Surfaces */
   --color-soft:    #f1f5f9;
