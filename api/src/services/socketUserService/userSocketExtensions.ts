@@ -1,7 +1,7 @@
 import type { Socket } from "socket.io";
 
 /**
- * Context for one authenticated toolbox user socket. Passed to extensions on attach;
+ * Context for one authenticated game user socket. Passed to extensions on attach;
  * `getSessionPage` reflects the current Next.js pathname tracked via `page-navigation`.
  */
 export type UserSocketAttachContext = {

@@ -1,17 +1,17 @@
 import mongoose from "mongoose";
 import "./User";
 
-export type SandboxEggClaimDocument = mongoose.Document & {
+export type PokemonMonsterCatchDocument = mongoose.Document & {
   userId: mongoose.Types.ObjectId;
   roomId: string;
   x: number;
   z: number;
-  svg: string;
+  name: string;
   createdAt: Date;
   updatedAt: Date;
 };
 
-const schema = new mongoose.Schema<SandboxEggClaimDocument>(
+const schema = new mongoose.Schema<PokemonMonsterCatchDocument>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -27,14 +27,14 @@ const schema = new mongoose.Schema<SandboxEggClaimDocument>(
     },
     x: { type: Number, required: true },
     z: { type: Number, required: true },
-    svg: { type: String, required: true, trim: true },
+    name: { type: String, required: true, trim: true },
   },
   { timestamps: true },
 );
 
 schema.index({ createdAt: -1 });
 
-export const SandboxEggClaim = mongoose.model<SandboxEggClaimDocument>(
-  "SandboxEggClaim",
+export const PokemonMonsterCatch = mongoose.model<PokemonMonsterCatchDocument>(
+  "PokemonMonsterCatch",
   schema,
 );

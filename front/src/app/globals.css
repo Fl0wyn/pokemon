@@ -1,20 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #1a1a2e;
-  --color-brand-hover: #252540;
-  --color-brand-active: #2d2d4e;
-  --color-sidebar: #0f172a;
-  --color-sidebar-hover: #1e293b;
-  --color-sidebar-active: #3b82f6;
-  --color-sidebar-icon: #94a3b8;
-  --color-soft: #f0f1f5;
-  --color-surface: #f5f6f8;
-  --color-card: #ffffff;
-  --color-border: #e8eaed;
-  --color-muted: #6b7280;
-  --color-subtle: #9ca3af;
-  --color-sidebar-text: #cbd5e1;
+  /* Brand / contenu principal */
+  --color-brand:        #1e293b;
+  --color-brand-hover:  #334155;
+  --color-brand-active: #475569;
+
+  /* Sidebar */
+  --color-sidebar:        #3b82f6;
+  --color-sidebar-hover:  #2563eb;
+  --color-sidebar-active: #1e3a5f;
+  --color-sidebar-icon:   #bfdbfe;
+  --color-sidebar-text:   #ffffff;
+  --color-sidebar-label:  #93c5fd;
+  --color-sidebar-sep:    #60a5fa;
+
+  /* Surfaces */
+  --color-soft:    #f1f5f9;
+  --color-surface: #f8fafc;
+  --color-card:    #ffffff;
+  --color-border:  #e2e8f0;
+  --color-muted:   #64748b;
+  --color-subtle:  #94a3b8;
+
   --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
 }
 
@@ -22,15 +30,12 @@ body {
   background: var(--color-surface);
   color: var(--color-brand);
   margin: 0;
+  font-family: var(--font-sans);
 }
 
 @keyframes rotating {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 .rotating {

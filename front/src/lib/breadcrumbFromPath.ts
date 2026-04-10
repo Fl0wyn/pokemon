@@ -20,7 +20,7 @@ export function breadcrumbFromPath(pathname: string): BreadcrumbItem[] {
     return [{ href: "/logout", label: "Déconnexion", current: true }];
   }
 
-  const items: BreadcrumbItem[] = [{ href: "/", label: "Toolbox" }];
+  const items: BreadcrumbItem[] = [{ href: "/", label: "Game" }];
 
   if (path === "/" || path === "") {
     items.push({ href: "/", label: "Dashboard", current: true });

@@ -1,8 +1,8 @@
+import AppChrome from "@/components/AppChrome";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import AppChrome from "@/components/AppChrome";
-import { Providers } from "./providers";
 import "./globals.css";
+import { Providers } from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Acs2i - Toolbox",
+  title: "Acs2i - Game",
   icons: {
     icon: "/logo.svg",
   },

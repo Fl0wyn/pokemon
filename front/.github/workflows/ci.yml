@@ -25,7 +25,7 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_KEY }}
-          repositories: acs2i-toolbox-front
+          repositories: acs2i-game-front
           owner: ${{ github.repository_owner }}
 
       - name: 📥 Checkout code
@@ -49,8 +49,8 @@ jobs:
       - name: 🏗️ Build
         run: npm run build
 
-      - name: 🔄 Restart acs2i-toolbox-front service with PM2
-        run: pm2 restart acs2i-toolbox-front
+      - name: 🔄 Restart acs2i-game-front service with PM2
+        run: pm2 restart acs2i-game-front
 
       - name: ✅ Update deployment status (success)
         if: success()
@@ -83,7 +83,7 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_KEY }}
-          repositories: acs2i-toolbox-front
+          repositories: acs2i-game-front
           owner: ${{ github.repository_owner }}
 
       - name: 📥 Checkout code
@@ -107,8 +107,8 @@ jobs:
       - name: 🏗️ Build
         run: npm run build
 
-      - name: 🔄 Restart acs2i-toolbox-front service with PM2
-        run: pm2 restart acs2i-toolbox-front
+      - name: 🔄 Restart acs2i-game-front service with PM2
+        run: pm2 restart acs2i-game-front
 
       - name: ✅ Update deployment status (success)
         if: success()

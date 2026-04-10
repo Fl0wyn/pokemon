@@ -13,7 +13,7 @@ function breadcrumbItemsForPath(pathname: string): BreadcrumbItem[] {
   const path = pathname.split("?")[0] ?? pathname;
   if (path === "/profile") {
     return [
-      { href: "/", label: "Toolbox" },
+      { href: "/", label: "Game" },
       { href: "/profile", label: "Mon profil", current: true },
     ];
   }

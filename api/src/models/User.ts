@@ -14,8 +14,8 @@ export type UserDocument = mongoose.Document & {
   github: string;
   rank: UserRank;
   profileImageFile?: mongoose.Types.ObjectId | null;
-  /** Last toolbox sandbox room id (for resume when returning to /sandbox). */
-  lastSandboxRoomId?: string | null;
+  /** Last game pokemon room id (for resume when returning to /pokemon). */
+  lastPokemonRoomId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -44,7 +44,7 @@ const schema = new mongoose.Schema<UserDocument>(
       ref: "File",
       default: null,
     },
-    lastSandboxRoomId: {
+    lastPokemonRoomId: {
       type: String,
       default: null,
       trim: true,

@@ -38,7 +38,7 @@ export async function loginRequest(req: Request, res: Response, next: any) {
           <!-- Header -->
           <tr>
             <td style="background-color:#1a1a2e;padding:32px;text-align:center;">
-              <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:1px;">Acs2i Toolbox</p>
+              <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:1px;">Acs2i Game</p>
             </td>
           </tr>
 
@@ -71,7 +71,7 @@ export async function loginRequest(req: Request, res: Response, next: any) {
 </body>
 </html>`;
 
-    sendMail(req.body.email, "Votre code de connexion Toolbox", html);
+    sendMail(req.body.email, "Votre code de connexion Game", html);
 
     res.status(200).json({
       status: "ok",

@@ -9,16 +9,15 @@ import axiosInstance from "@/utils/axiosInstance";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
-  Copy,
-  Loader,
-  Maximize2,
-  Minimize2,
-  Shield,
-  User as UserIcon,
-  UserPlus,
-  Users,
+    ChevronLeft,
+    ChevronRight,
+    Copy,
+    Loader,
+    Maximize2,
+    Minimize2,
+    Shield,
+    User as UserIcon,
+    UserPlus
 } from "react-feather";
 
 const PAGE_SIZE = 20;
@@ -278,16 +277,16 @@ function UsersPageInner() {
     };
     const onDisconnect = () => setOnlineUserIds(new Set());
     const requestPresenceSnapshot = () => {
-      socket.emit("toolbox:presence:request");
+      socket.emit("game:presence:request");
     };
 
-    socket.on("toolbox:presence", onPresence);
+    socket.on("game:presence", onPresence);
     socket.on("disconnect", onDisconnect);
     socket.on("connect", requestPresenceSnapshot);
     requestPresenceSnapshot();
 
     return () => {
-      socket.off("toolbox:presence", onPresence);
+      socket.off("game:presence", onPresence);
       socket.off("disconnect", onDisconnect);
       socket.off("connect", requestPresenceSnapshot);
     };

@@ -10,7 +10,7 @@ export function getSocketBaseUrl(): string {
     return api.replace(/\/api$/, "") || api;
   }
 
-  return "https://toolbox.acs2i.fr";
+  return "https://game.acs2i.fr";
 }
 
 export function getSocketPath(baseUrl: string): string {

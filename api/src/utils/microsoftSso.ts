@@ -1,5 +1,5 @@
-import { randomBytes } from "crypto";
 import axios from "axios";
+import { randomBytes } from "crypto";
 import jwt from "jsonwebtoken";
 import { getJwtSecret } from "./authSession";
 
@@ -152,7 +152,7 @@ export async function fetchPrimaryEmailFromGraph(
 export function assertAcs2iEmail(email: string): void {
   if (!email.toLowerCase().endsWith(ALLOWED_EMAIL_SUFFIX)) {
     throw new Error(
-      "Seuls les comptes @acs2i.fr peuvent se connecter à la toolbox.",
+      "Seuls les comptes @acs2i.fr peuvent se connecter à la game.",
     );
   }
 }

@@ -11,7 +11,7 @@ export function getJwtSecret(): string {
   return jwtSecret;
 }
 
-/** Ensures a toolbox user exists (default rank: user). */
+/** Ensures a game user exists (default rank: user). */
 export async function findOrCreateUserByEmail(rawEmail: string): Promise<void> {
   const email = rawEmail.toLowerCase().trim();
   let user = await User.findOne({ email }).exec();

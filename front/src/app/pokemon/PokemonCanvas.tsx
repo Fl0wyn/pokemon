@@ -6,17 +6,17 @@ import axiosInstance from "@/utils/axiosInstance";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { SandboxMapEditor } from "./SandboxMapEditor";
+import { PokemonMapEditor } from "./PokemonMapEditor";
 import { MONSTER_NAMES } from "./monsterList";
 
-/** Must match API `sandboxRooms.config.json` defaultRoomId. */
+/** Must match API `pokemonRooms.config.json` defaultRoomId. */
 const DEFAULT_ROOM_ID = "office-south";
-const SANDBOX_LAST_ROOM_LS = "sandboxLastRoomId";
+const POKEMON_LAST_ROOM_LS = "pokemonLastRoomId";
 
-function readStoredSandboxRoomId(): string {
+function readStoredPokemonRoomId(): string {
   if (typeof window === "undefined") return DEFAULT_ROOM_ID;
   try {
-    const s = localStorage.getItem(SANDBOX_LAST_ROOM_LS);
+    const s = localStorage.getItem(POKEMON_LAST_ROOM_LS);
     if (s && s.trim().length > 0) return s.trim();
   } catch {
     /* private mode */
@@ -27,7 +27,7 @@ const AVATAR_RADIUS = 0.3;
 const MOVE_SPEED = 4;
 const EMIT_MS = 55;
 
-type SandboxPlayer = {
+type PokemonPlayer = {
   userId: string;
   email: string;
   x: number;
@@ -215,7 +215,7 @@ function disposeObject3D(o: THREE.Object3D) {
   });
 }
 
-export default function SandboxCanvas() {
+export default function PokemonCanvas() {
   const { socket } = useAppSocket();
   const pathname = usePathname();
   const [myScore, setMyScore] = useState(0);
@@ -230,14 +230,14 @@ export default function SandboxCanvas() {
     email: "",
     previewKey: null,
   });
-  const playersRef = useRef<SandboxPlayer[]>([]);
-  const roomIdRef = useRef(readStoredSandboxRoomId());
+  const playersRef = useRef<PokemonPlayer[]>([]);
+  const roomIdRef = useRef(readStoredPokemonRoomId());
   const boundsRef = useRef<RoomBounds>({ halfW: 10, halfD: 4 });
   const requestStateRef = useRef<(() => void) | null>(null);
 
   /** After navigation + socket `page-navigation`, ask server to resume last room. */
   useEffect(() => {
-    if (!socket || pathname !== "/sandbox") return;
+    if (!socket || pathname !== "/pokemon") return;
     const t = window.setTimeout(() => {
       if (socket.connected) socket.emit("sandbox:request-state");
     }, 0);
@@ -283,7 +283,7 @@ export default function SandboxCanvas() {
 
     const onPlayers = (payload: {
       roomId?: string;
-      players?: SandboxPlayer[];
+      players?: PokemonPlayer[];
     }) => {
       if (payload.roomId && payload.roomId !== roomIdRef.current) return;
       playersRef.current = Array.isArray(payload?.players) ? payload.players : [];
@@ -313,16 +313,16 @@ export default function SandboxCanvas() {
       }
     };
 
-    const requestSandboxState = () => {
+    const requestPokemonState = () => {
       if (!socket.connected) return;
       socket.emit("sandbox:request-state");
     };
-    requestStateRef.current = requestSandboxState;
+    requestStateRef.current = requestPokemonState;
 
     socket.on("sandbox:players", onPlayers);
     socket.on("sandbox:eggs:score", onEggScores);
     socket.on("sandbox:monster-state", onMonsterState);
-    socket.on("connect", requestSandboxState);
+    socket.on("connect", requestPokemonState);
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf1f5f9);
@@ -357,7 +357,7 @@ export default function SandboxCanvas() {
     let deskAabbs: Aabb[] = [];
     const stairMeshes: THREE.Mesh[] = [];
     let stairsList: StairScene[] = [];
-    const grassTex = textureLoader.load("/tiles/grass.png", (t) => {
+    const grassTex = textureLoader.load("/pokemon/tiles/grass.png", (t) => {
       t.colorSpace = THREE.SRGBColorSpace;
       t.wrapS = THREE.RepeatWrapping;
       t.wrapT = THREE.RepeatWrapping;
@@ -408,7 +408,7 @@ export default function SandboxCanvas() {
         mesh.position.set(d.x, 0.01, d.z);
         mesh.renderOrder = 0;
         furniture.add(mesh);
-        textureLoader.load(`/tiles/${d.tileType}.png`, (tex) => {
+        textureLoader.load(`/pokemon/tiles/${d.tileType}.png`, (tex) => {
           if (disposed) { tex.dispose(); return; }
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.needsUpdate = true;
@@ -434,7 +434,7 @@ export default function SandboxCanvas() {
         furniture.add(mesh);
         stairMeshes.push(mesh);
         const stairSkin = st.skin ?? "stair";
-        textureLoader.load(`/tiles/${stairSkin}.png`, (tex) => {
+        textureLoader.load(`/pokemon/tiles/${stairSkin}.png`, (tex) => {
           if (disposed) { tex.dispose(); return; }
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.needsUpdate = true;
@@ -470,7 +470,7 @@ export default function SandboxCanvas() {
       furniture.add(mesh);
       monsterMeshes.push(mesh);
 
-      textureLoader.load(`/monsters/${encodeURIComponent(monsterState.name)}.png`, (tex) => {
+      textureLoader.load(`/pokemon/monsters/${encodeURIComponent(monsterState.name)}.png`, (tex) => {
         if (disposed) { tex.dispose(); return; }
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.needsUpdate = true;
@@ -490,7 +490,7 @@ export default function SandboxCanvas() {
       if (disposed) return;
       roomIdRef.current = payload.roomId;
       try {
-        localStorage.setItem(SANDBOX_LAST_ROOM_LS, payload.roomId);
+        localStorage.setItem(POKEMON_LAST_ROOM_LS, payload.roomId);
       } catch {
         /* ignore */
       }
@@ -528,7 +528,7 @@ export default function SandboxCanvas() {
     };
     socket.on("sandbox:teleport-to", onTeleportTo);
 
-    requestSandboxState();
+    requestPokemonState();
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.9));
     const sun = new THREE.DirectionalLight(0xffffff, 0.25);
@@ -589,7 +589,7 @@ export default function SandboxCanvas() {
       });
     }
 
-    function ensurePlayerMesh(p: SandboxPlayer) {
+    function ensurePlayerMesh(p: PokemonPlayer) {
       let g = playerMeshes.get(p.userId);
       if (g) return g;
 
@@ -659,7 +659,7 @@ export default function SandboxCanvas() {
         pbMesh.renderOrder = 4;
         pbMesh.name = "pokeball";
         g.add(pbMesh);
-        textureLoader.load("/tiles/pokeball.png", (tex) => {
+        textureLoader.load("/pokemon/tiles/pokeball.png", (tex) => {
           if (disposed) { tex.dispose(); return; }
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.needsUpdate = true;
@@ -674,7 +674,7 @@ export default function SandboxCanvas() {
       return g;
     }
 
-    function syncPlayerMeshes(list: SandboxPlayer[]) {
+    function syncPlayerMeshes(list: PokemonPlayer[]) {
       const seen = new Set<string>();
       for (const p of list) {
         seen.add(p.userId);
@@ -749,7 +749,7 @@ export default function SandboxCanvas() {
 
       const list = playersRef.current;
       const meId = meRef.current.id;
-      const displayList: SandboxPlayer[] =
+      const displayList: PokemonPlayer[] =
         meId && !list.some((p) => p.userId === meId)
           ? [
               ...list,
@@ -820,7 +820,7 @@ export default function SandboxCanvas() {
       socket.off("sandbox:players", onPlayers);
       socket.off("sandbox:eggs:score", onEggScores);
       socket.off("sandbox:monster-state", onMonsterState);
-      socket.off("connect", requestSandboxState);
+      socket.off("connect", requestPokemonState);
       socket.off("sandbox:room-joined", onRoomJoined);
       socket.off("sandbox:map-reload", onMapReload);
       socket.off("sandbox:teleport-to", onTeleportTo);
@@ -861,15 +861,12 @@ export default function SandboxCanvas() {
             ref={containerRef}
             className="aspect-2/1 w-full min-h-96 cursor-crosshair overflow-hidden rounded-xl border border-border bg-soft/30"
           />
-          <div className="pointer-events-none absolute top-3 right-3 rounded-md border border-border/70 bg-white/90 px-3 py-2 text-sm shadow-sm">
-            <div className="text-xs text-muted">Capturés</div>
-            <div className="text-base font-semibold text-foreground">{myScore}/{MONSTER_TOTAL}</div>
-          </div>
+
         </div>
       )}
 
       {isAdmin && editingMap && (
-        <SandboxMapEditor
+        <PokemonMapEditor
           onClose={() => setEditingMap(false)}
           onSaved={() => requestStateRef.current?.()}
         />
@@ -951,7 +948,7 @@ export default function SandboxCanvas() {
                       style={{ opacity: caught ? 1 : 0.3 }}
                     >
                       <img
-                        src={`/monsters/${encodeURIComponent(name)}.png`}
+                        src={`/pokemon/monsters/${encodeURIComponent(name)}.png`}
                         alt={name}
                         className="w-12 h-12 object-contain"
                         style={{ filter: caught ? "none" : "grayscale(1)" }}

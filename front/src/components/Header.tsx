@@ -74,7 +74,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-[60] flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card px-3 md:px-4">
+      <header className="sticky top-0 z-60 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card px-3 md:px-4">
         <Breadcrumb />
         <button
           type="button"
@@ -111,14 +111,14 @@ export default function Header() {
 
       {open ? (
         <div
-          className="fixed inset-0 z-[70] md:hidden"
+          className="fixed inset-0 z-70 md:hidden"
           role="dialog"
           aria-modal="true"
           aria-label="Navigation"
         >
           <button
             type="button"
-            className="absolute inset-0 border-0 bg-[var(--color-brand)]/40 p-0 cursor-pointer"
+            className="absolute inset-0 border-0 bg-brand/40 p-0 cursor-pointer"
             aria-label="Fermer le menu"
             onClick={() => setOpen(false)}
           />
@@ -126,7 +126,7 @@ export default function Header() {
             id="mobile-app-nav"
             className="absolute right-0 top-0 flex h-full w-[min(20rem,100vw)] flex-col overflow-y-auto bg-sidebar shadow-2xl"
           >
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-indigo-400/20 px-3 py-2">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-sidebar-sep/60 px-3 py-2">
               <span className="truncate text-sm font-semibold text-white">Menu</span>
               <button
                 type="button"

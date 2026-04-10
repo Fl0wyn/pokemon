@@ -4,7 +4,7 @@ import { Socket, Server as SocketIOServer } from "socket.io";
 import { User } from "../../models/User";
 import type { UserSocketExtension } from "./userSocketExtensions";
 
-export type { UserSocketExtension, UserSocketAttachContext, UserSocketPageNavigationContext } from "./userSocketExtensions";
+export type { UserSocketAttachContext, UserSocketExtension, UserSocketPageNavigationContext } from "./userSocketExtensions";
 
 interface UserSession {
   userId: string;
@@ -38,7 +38,7 @@ export const TOOLBOX_PAGE = {
   USERS: "/users",
   DEPLOYMENTS: "/deployments",
   MONITORING: "/monitoring",
-  SANDBOX: "/sandbox",
+  POKEMON: "/pokemon",
 } as const;
 
 class SocketUserService {
@@ -246,8 +246,8 @@ class SocketUserService {
         },
       );
 
-      socket.on("toolbox:presence:request", () => {
-        socket.emit("toolbox:presence", {
+      socket.on("game:presence:request", () => {
+        socket.emit("game:presence", {
           onlineUserIds: this.getOnlineUserIds(),
         });
       });
@@ -360,9 +360,9 @@ class SocketUserService {
     return Array.from(this.connectedUsers.keys());
   }
 
-  /** Presence updates — clients on Utilisateurs only (others use `toolbox:presence:request` when entering). */
+  /** Presence updates — clients on Utilisateurs only (others use `game:presence:request` when entering). */
   private broadcastToolboxPresence() {
-    this.emitToPage(TOOLBOX_PAGE.USERS, "toolbox:presence", {
+    this.emitToPage(TOOLBOX_PAGE.USERS, "game:presence", {
       onlineUserIds: this.getOnlineUserIds(),
     });
   }

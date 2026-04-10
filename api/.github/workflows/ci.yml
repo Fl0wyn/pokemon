@@ -25,7 +25,7 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_KEY }}
-          repositories: acs2i-toolbox-api
+          repositories: acs2i-game-api
           owner: ${{ github.repository_owner }}
 
       - name: 📥 Checkout code
@@ -57,8 +57,8 @@ jobs:
         run: npm run build
         working-directory: scripts/pm2-agent
 
-      - name: 🔄 Restart acs2i-toolbox-api service with PM2
-        run: pm2 restart acs2i-toolbox-api
+      - name: 🔄 Restart acs2i-game-api service with PM2
+        run: pm2 restart acs2i-game-api
 
       - name: ✅ Update deployment status (success)
         if: success()
@@ -91,7 +91,7 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_KEY }}
-          repositories: acs2i-toolbox-api
+          repositories: acs2i-game-api
           owner: ${{ github.repository_owner }}
 
       - name: 📥 Checkout code
@@ -123,8 +123,8 @@ jobs:
         run: npm run build
         working-directory: scripts/pm2-agent
 
-      - name: 🔄 Restart acs2i-toolbox-api service with PM2
-        run: pm2 restart acs2i-toolbox-api
+      - name: 🔄 Restart acs2i-game-api service with PM2
+        run: pm2 restart acs2i-game-api
 
       - name: ✅ Update deployment status (success)
         if: success()

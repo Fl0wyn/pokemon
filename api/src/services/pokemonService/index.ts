@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 import type { Server as SocketIOServer } from "socket.io";
 import type { Socket } from "socket.io";
 import { User } from "../../models/User";
-import { SandboxEggClaim } from "../../models/SandboxEggClaim";
-import { SandboxMonsterCatch } from "../../models/SandboxMonsterCatch";
-import { SandboxPlacement } from "../../models/SandboxPlacement";
+import { PokemonEggClaim } from "../../models/PokemonEggClaim";
+import { PokemonMonsterCatch } from "../../models/PokemonMonsterCatch";
+import { PokemonPlacement } from "../../models/PokemonPlacement";
 import {
   socketUserService,
   TOOLBOX_PAGE,
@@ -15,20 +15,20 @@ import type {
   UserSocketPageNavigationContext,
 } from "../socketUserService/userSocketExtensions";
 import {
-  DEFAULT_SANDBOX_ROOM_ID,
+  DEFAULT_POKEMON_ROOM_ID,
   SOLID_TILE_TYPES,
   canUseStairAtPosition,
   findStairDef,
   getClientRoomScene,
-  getSandboxRoom,
-  getSandboxRoomRuntime,
-  listSandboxRoomIds,
-  type SandboxRoomDef,
+  getPokemonRoom,
+  getPokemonRoomRuntime,
+  listPokemonRoomIds,
+  type PokemonRoomDef,
 } from "./rooms";
 import {
-  getResumeSandboxRoomId,
-  persistLastSandboxRoomId,
-} from "./sandboxLastRoom";
+  getResumePokemonRoomId,
+  persistLastPokemonRoomId,
+} from "./pokemonLastRoom";
 import { generateEggSvg } from "./eggGeneratorService";
 import { randomMonsterName } from "./monsterGeneratorService";
 
@@ -40,13 +40,13 @@ const MONSTER_RESPAWN_MS = 8000;
 const MONSTER_PICK_RADIUS = 1.1;
 const MONSTER_RADIUS = 0.35;
 
-type SandboxPlayerState = {
+type PokemonPlayerState = {
   x: number;
   z: number;
   previewKey: string | null;
 };
 
-type SandboxEggState = {
+type PokemonEggState = {
   id: string;
   roomId: string;
   x: number;
@@ -54,7 +54,7 @@ type SandboxEggState = {
   svg: string;
 };
 
-type SandboxMonsterState = {
+type PokemonMonsterState = {
   id: string;
   roomId: string;
   x: number;
@@ -71,18 +71,18 @@ type ScoreRow = {
 };
 
 function normalizeRoomId(raw: unknown): string {
-  if (typeof raw !== "string" || !raw.trim()) return DEFAULT_SANDBOX_ROOM_ID;
+  if (typeof raw !== "string" || !raw.trim()) return DEFAULT_POKEMON_ROOM_ID;
   const id = raw.trim();
-  return getSandboxRoom(id) ? id : DEFAULT_SANDBOX_ROOM_ID;
+  return getPokemonRoom(id) ? id : DEFAULT_POKEMON_ROOM_ID;
 }
 
-class SandboxService implements UserSocketExtension {
+class PokemonService implements UserSocketExtension {
   /** `${userId}::${roomId}` → live position for online users */
-  private playerState = new Map<string, SandboxPlayerState>();
+  private playerState = new Map<string, PokemonPlayerState>();
   private persistTimers = new Map<string, NodeJS.Timeout>();
-  private egg: SandboxEggState | null = null;
+  private egg: PokemonEggState | null = null;
   private eggRespawnTimer: NodeJS.Timeout | null = null;
-  private monster: SandboxMonsterState | null = null;
+  private monster: PokemonMonsterState | null = null;
   private monsterRespawnTimer: NodeJS.Timeout | null = null;
   private registered = false;
 
@@ -95,16 +95,16 @@ class SandboxService implements UserSocketExtension {
   }
 
   private channel(roomId: string): string {
-    return `sandbox:${roomId}`;
+    return `pokemon:${roomId}`;
   }
 
   private stateKey(userId: string, roomId: string): string {
     return `${userId}::${roomId}`;
   }
 
-  private listSandboxSocketIds(io: SocketIOServer): Set<string> {
+  private listPokemonSocketIds(io: SocketIOServer): Set<string> {
     const ids = new Set<string>();
-    for (const rid of listSandboxRoomIds()) {
+    for (const rid of listPokemonRoomIds()) {
       const room = io.sockets.adapter.rooms.get(this.channel(rid));
       if (!room) continue;
       for (const sid of room) ids.add(sid);
@@ -113,7 +113,7 @@ class SandboxService implements UserSocketExtension {
   }
 
   private isPointOnDesk(roomId: string, x: number, z: number): boolean {
-    const rt = getSandboxRoomRuntime(roomId);
+    const rt = getPokemonRoomRuntime(roomId);
     if (!rt) return false;
     for (const d of rt.objects) {
       if (!SOLID_TILE_TYPES.has(d.tileType)) continue;
@@ -133,12 +133,12 @@ class SandboxService implements UserSocketExtension {
     return false;
   }
 
-  private randomSpawnEgg(): SandboxEggState | null {
-    const roomIds = listSandboxRoomIds();
+  private randomSpawnEgg(): PokemonEggState | null {
+    const roomIds = listPokemonRoomIds();
     if (roomIds.length === 0) return null;
     for (let i = 0; i < 80; i++) {
       const roomId = roomIds[Math.floor(Math.random() * roomIds.length)]!;
-      const def = getSandboxRoom(roomId);
+      const def = getPokemonRoom(roomId);
       if (!def) continue;
       const x = (Math.random() * 2 - 1) * (def.halfW - EGG_RADIUS - 0.2);
       const z = (Math.random() * 2 - 1) * (def.halfD - EGG_RADIUS - 0.2);
@@ -157,7 +157,7 @@ class SandboxService implements UserSocketExtension {
   private broadcastEggState(): void {
     const io = socketUserService.getIO();
     if (!io) return;
-    const socketIds = this.listSandboxSocketIds(io);
+    const socketIds = this.listPokemonSocketIds(io);
     for (const sid of socketIds) {
       const sock = io.sockets.sockets.get(sid);
       if (!sock) continue;
@@ -176,12 +176,12 @@ class SandboxService implements UserSocketExtension {
 
   // ── Monster system ──────────────────────────────────────────────────────────
 
-  private randomSpawnMonster(): SandboxMonsterState | null {
-    const roomIds = listSandboxRoomIds();
+  private randomSpawnMonster(): PokemonMonsterState | null {
+    const roomIds = listPokemonRoomIds();
     if (roomIds.length === 0) return null;
     for (let i = 0; i < 80; i++) {
       const roomId = roomIds[Math.floor(Math.random() * roomIds.length)]!;
-      const def = getSandboxRoom(roomId);
+      const def = getPokemonRoom(roomId);
       if (!def) continue;
       const x = (Math.random() * 2 - 1) * (def.halfW - MONSTER_RADIUS - 0.2);
       const z = (Math.random() * 2 - 1) * (def.halfD - MONSTER_RADIUS - 0.2);
@@ -200,7 +200,7 @@ class SandboxService implements UserSocketExtension {
   private broadcastMonsterState(): void {
     const io = socketUserService.getIO();
     if (!io) return;
-    const socketIds = this.listSandboxSocketIds(io);
+    const socketIds = this.listPokemonSocketIds(io);
     for (const sid of socketIds) {
       const sock = io.sockets.sockets.get(sid);
       if (!sock) continue;
@@ -219,7 +219,7 @@ class SandboxService implements UserSocketExtension {
 
   private async collectMonster(socket: Socket, userId: string): Promise<void> {
     if (!this.monster) return;
-    if (socket.data.sandboxRoomId !== this.monster.roomId) return;
+    if (socket.data.pokemonRoomId !== this.monster.roomId) return;
     const st = this.playerState.get(this.stateKey(userId, this.monster.roomId));
     if (!st) return;
     const dist = Math.hypot(st.x - this.monster.x, st.z - this.monster.z);
@@ -230,7 +230,7 @@ class SandboxService implements UserSocketExtension {
     this.broadcastMonsterState();
     this.scheduleMonsterRespawn();
 
-    await SandboxMonsterCatch.create({
+    await PokemonMonsterCatch.create({
       userId: new mongoose.Types.ObjectId(userId),
       roomId: taken.roomId,
       x: taken.x,
@@ -243,7 +243,7 @@ class SandboxService implements UserSocketExtension {
   // ── End monster system ──────────────────────────────────────────────────────
 
   private async buildMonsterScoreboard(): Promise<ScoreRow[]> {
-    const rows = await SandboxMonsterCatch.aggregate<{
+    const rows = await PokemonMonsterCatch.aggregate<{
       _id: mongoose.Types.ObjectId;
       eggs: number;
       names: string[];
@@ -279,7 +279,7 @@ class SandboxService implements UserSocketExtension {
   }
 
   private async getUserMonsterCatches(userId: string): Promise<{ score: number; catches: Record<string, number> }> {
-    const docs = await SandboxMonsterCatch.find({
+    const docs = await PokemonMonsterCatch.find({
       userId: new mongoose.Types.ObjectId(userId),
     }).select("name").lean();
     const catches: Record<string, number> = {};
@@ -302,7 +302,7 @@ class SandboxService implements UserSocketExtension {
     const io = socketUserService.getIO();
     if (!io) return;
     const hallOfFame = await this.buildMonsterScoreboard();
-    const socketIds = this.listSandboxSocketIds(io);
+    const socketIds = this.listPokemonSocketIds(io);
     const userCatchCache = new Map<string, { score: number; catches: Record<string, number> }>();
     for (const sid of socketIds) {
       const sock = io.sockets.sockets.get(sid);
@@ -320,7 +320,7 @@ class SandboxService implements UserSocketExtension {
 
   private async collectEgg(socket: Socket, userId: string): Promise<void> {
     if (!this.egg) return;
-    if (socket.data.sandboxRoomId !== this.egg.roomId) return;
+    if (socket.data.pokemonRoomId !== this.egg.roomId) return;
     const st = this.playerState.get(this.stateKey(userId, this.egg.roomId));
     if (!st) return;
     const dist = Math.hypot(st.x - this.egg.x, st.z - this.egg.z);
@@ -331,7 +331,7 @@ class SandboxService implements UserSocketExtension {
     this.broadcastEggState();
     this.scheduleEggRespawn();
 
-    await SandboxEggClaim.create({
+    await PokemonEggClaim.create({
       userId: new mongoose.Types.ObjectId(userId),
       roomId: taken.roomId,
       x: taken.x,
@@ -344,7 +344,7 @@ class SandboxService implements UserSocketExtension {
   private clampXZ(
     x: number,
     z: number,
-    def: SandboxRoomDef,
+    def: PokemonRoomDef,
   ): { x: number; z: number } {
     const r = AVATAR_RADIUS;
     return {
@@ -365,11 +365,11 @@ class SandboxService implements UserSocketExtension {
     if (prev) clearTimeout(prev);
     const t = setTimeout(() => {
       this.persistTimers.delete(key);
-      void SandboxPlacement.findOneAndUpdate(
+      void PokemonPlacement.findOneAndUpdate(
         { userId: new mongoose.Types.ObjectId(userId), roomId },
         { $set: { x, z, previewKey } },
         { upsert: true },
-      ).catch((err) => console.error("[sandbox] persist failed:", err));
+      ).catch((err) => console.error("[pokemon] persist failed:", err));
     }, 500);
     this.persistTimers.set(key, t);
   }
@@ -381,11 +381,11 @@ class SandboxService implements UserSocketExtension {
     roomId: string,
     spawnOverride?: { x: number; z: number },
   ): Promise<void> {
-    if (getSessionPage() !== TOOLBOX_PAGE.SANDBOX) return;
-    const def = getSandboxRoom(roomId);
+    if (getSessionPage() !== TOOLBOX_PAGE.POKEMON) return;
+    const def = getPokemonRoom(roomId);
     if (!def) return;
 
-    const prev = socket.data.sandboxRoomId as string | undefined;
+    const prev = socket.data.pokemonRoomId as string | undefined;
     if (prev === roomId && !spawnOverride) {
       if (!socket.rooms.has(this.channel(roomId))) {
         socket.join(this.channel(roomId));
@@ -399,11 +399,11 @@ class SandboxService implements UserSocketExtension {
         x,
         z,
         bounds: { halfW: def.halfW, halfD: def.halfD },
-        roomIds: listSandboxRoomIds(),
-        defaultRoomId: DEFAULT_SANDBOX_ROOM_ID,
+        roomIds: listPokemonRoomIds(),
+        defaultRoomId: DEFAULT_POKEMON_ROOM_ID,
         scene: scene ?? { objects: [], stairs: [] },
       });
-      persistLastSandboxRoomId(userId, roomId);
+      persistLastPokemonRoomId(userId, roomId);
       this.sendPlayersToSocket(socket, roomId);
       socket.emit("sandbox:egg-state", { egg: this.egg });
       socket.emit("sandbox:monster-state", { monster: this.monster });
@@ -417,7 +417,7 @@ class SandboxService implements UserSocketExtension {
     }
 
     socket.join(this.channel(roomId));
-    socket.data.sandboxRoomId = roomId;
+    socket.data.pokemonRoomId = roomId;
 
     let x = def.defaultSpawn.x;
     let z = def.defaultSpawn.z;
@@ -431,7 +431,7 @@ class SandboxService implements UserSocketExtension {
       x = c.x;
       z = c.z;
     } else {
-      const doc = await SandboxPlacement.findOne({
+      const doc = await PokemonPlacement.findOne({
         userId: new mongoose.Types.ObjectId(userId),
         roomId,
       }).lean();
@@ -457,21 +457,21 @@ class SandboxService implements UserSocketExtension {
       x,
       z,
       bounds: { halfW: def.halfW, halfD: def.halfD },
-      roomIds: listSandboxRoomIds(),
-      defaultRoomId: DEFAULT_SANDBOX_ROOM_ID,
+      roomIds: listPokemonRoomIds(),
+      defaultRoomId: DEFAULT_POKEMON_ROOM_ID,
       scene: sceneOut ?? { objects: [], stairs: [] },
     });
 
-    persistLastSandboxRoomId(userId, roomId);
+    persistLastPokemonRoomId(userId, roomId);
     this.broadcastRoom(roomId);
     socket.emit("sandbox:egg-state", { egg: this.egg });
     socket.emit("sandbox:monster-state", { monster: this.monster });
     void this.sendScoreToSocket(socket, userId);
   }
 
-  private leaveSandboxRoom(socket: Socket, roomId: string): void {
+  private leavePokemonRoom(socket: Socket, roomId: string): void {
     socket.leave(this.channel(roomId));
-    delete socket.data.sandboxRoomId;
+    delete socket.data.pokemonRoomId;
     this.broadcastRoom(roomId);
   }
 
@@ -505,8 +505,8 @@ class SandboxService implements UserSocketExtension {
     });
 
     socket.on("sandbox:use-stair", (data: { stairId?: string }) => {
-      if (getSessionPage() !== TOOLBOX_PAGE.SANDBOX) return;
-      const roomId = socket.data.sandboxRoomId as string | undefined;
+      if (getSessionPage() !== TOOLBOX_PAGE.POKEMON) return;
+      const roomId = socket.data.pokemonRoomId as string | undefined;
       const stairId = typeof data?.stairId === "string" ? data.stairId.trim() : "";
       if (!roomId || !stairId) return;
 
@@ -537,12 +537,12 @@ class SandboxService implements UserSocketExtension {
     });
 
     socket.on("sandbox:collect-egg", () => {
-      if (getSessionPage() !== TOOLBOX_PAGE.SANDBOX) return;
+      if (getSessionPage() !== TOOLBOX_PAGE.POKEMON) return;
       void this.collectEgg(socket, userId);
     });
 
     socket.on("sandbox:collect-monster", () => {
-      if (getSessionPage() !== TOOLBOX_PAGE.SANDBOX) return;
+      if (getSessionPage() !== TOOLBOX_PAGE.POKEMON) return;
       void this.collectMonster(socket, userId);
     });
 
@@ -554,12 +554,12 @@ class SandboxService implements UserSocketExtension {
         z?: unknown;
         previewKey?: unknown;
       }) => {
-        if (getSessionPage() !== TOOLBOX_PAGE.SANDBOX) return;
-        const roomId = socket.data.sandboxRoomId as string | undefined;
+        if (getSessionPage() !== TOOLBOX_PAGE.POKEMON) return;
+        const roomId = socket.data.pokemonRoomId as string | undefined;
         if (!roomId) return;
         if (typeof data.roomId === "string" && data.roomId !== roomId) return;
 
-        const def = getSandboxRoom(roomId);
+        const def = getPokemonRoom(roomId);
         if (!def) return;
 
         const x =
@@ -590,11 +590,11 @@ class SandboxService implements UserSocketExtension {
     );
 
     socket.on("sandbox:request-state", () => {
-      if (getSessionPage() !== TOOLBOX_PAGE.SANDBOX) return;
-      const roomId = socket.data.sandboxRoomId as string | undefined;
+      if (getSessionPage() !== TOOLBOX_PAGE.POKEMON) return;
+      const roomId = socket.data.pokemonRoomId as string | undefined;
       if (!roomId) {
         void (async () => {
-          const resume = await getResumeSandboxRoomId(userId);
+          const resume = await getResumePokemonRoomId(userId);
           await this.performJoinRoom(
             socket,
             userId,
@@ -604,7 +604,7 @@ class SandboxService implements UserSocketExtension {
         })();
         return;
       }
-      // Toujours renvoyer `sandbox:room-joined` : le premier émis au
+      // Toujours renvoyer `pokemon:room-joined` : le premier émis au
       // `page-navigation` peut arriver avant que le client enregistre le listener.
       void this.performJoinRoom(socket, userId, getSessionPage, roomId);
     });
@@ -612,20 +612,20 @@ class SandboxService implements UserSocketExtension {
 
   onBeforeSessionRemoved(ctx: UserSocketAttachContext): void {
     const { socket, getSessionPage } = ctx;
-    if (getSessionPage() !== TOOLBOX_PAGE.SANDBOX) return;
-    const roomId = socket.data.sandboxRoomId as string | undefined;
-    if (roomId) this.leaveSandboxRoom(socket, roomId);
+    if (getSessionPage() !== TOOLBOX_PAGE.POKEMON) return;
+    const roomId = socket.data.pokemonRoomId as string | undefined;
+    if (roomId) this.leavePokemonRoom(socket, roomId);
   }
 
   onAfterPageNavigation(ctx: UserSocketPageNavigationContext): void {
     const { socket, oldPage, newPage, getSessionPage } = ctx;
-    if (oldPage === TOOLBOX_PAGE.SANDBOX && newPage !== TOOLBOX_PAGE.SANDBOX) {
-      const roomId = socket.data.sandboxRoomId as string | undefined;
-      if (roomId) this.leaveSandboxRoom(socket, roomId);
+    if (oldPage === TOOLBOX_PAGE.POKEMON && newPage !== TOOLBOX_PAGE.POKEMON) {
+      const roomId = socket.data.pokemonRoomId as string | undefined;
+      if (roomId) this.leavePokemonRoom(socket, roomId);
     }
-    if (oldPage !== TOOLBOX_PAGE.SANDBOX && newPage === TOOLBOX_PAGE.SANDBOX) {
+    if (oldPage !== TOOLBOX_PAGE.POKEMON && newPage === TOOLBOX_PAGE.POKEMON) {
       void (async () => {
-        const resume = await getResumeSandboxRoomId(ctx.userId);
+        const resume = await getResumePokemonRoomId(ctx.userId);
         await this.performJoinRoom(
           socket,
           ctx.userId,
@@ -638,7 +638,7 @@ class SandboxService implements UserSocketExtension {
 
   private pruneState(): void {
     const allowed = socketUserService.getUserIdsWithSessionOnPage(
-      TOOLBOX_PAGE.SANDBOX,
+      TOOLBOX_PAGE.POKEMON,
     );
     for (const key of [...this.playerState.keys()]) {
       const userId = key.split("::")[0] ?? "";
@@ -668,7 +668,7 @@ class SandboxService implements UserSocketExtension {
         const uid = (sock as unknown as { userId?: string }).userId;
         if (!uid) continue;
         if (
-          socketUserService.getSessionPage(uid, sid) !== TOOLBOX_PAGE.SANDBOX
+          socketUserService.getSessionPage(uid, sid) !== TOOLBOX_PAGE.POKEMON
         ) {
           continue;
         }
@@ -719,8 +719,8 @@ class SandboxService implements UserSocketExtension {
   broadcastMapReload(changedSpawns: Record<string, { x: number; z: number }> = {}): void {
     const io = socketUserService.getIO();
     if (!io) return;
-    for (const roomId of listSandboxRoomIds()) {
-      const def = getSandboxRoom(roomId);
+    for (const roomId of listPokemonRoomIds()) {
+      const def = getPokemonRoom(roomId);
       const scene = getClientRoomScene(roomId);
       if (!def || !scene) continue;
       io.to(this.channel(roomId)).emit("sandbox:map-reload", {
@@ -759,14 +759,14 @@ class SandboxService implements UserSocketExtension {
   }
 }
 
-export const sandboxService = new SandboxService();
+export const pokemonService = new PokemonService();
 
 export {
-  DEFAULT_SANDBOX_ROOM_ID,
+  DEFAULT_POKEMON_ROOM_ID,
   getClientRoomScene,
-  listSandboxRoomIds,
-  SANDBOX_ROOMS,
-  type SandboxDeskObject,
-  type SandboxStairObject,
-  type SandboxRoomRuntime,
+  listPokemonRoomIds,
+  POKEMON_ROOMS,
+  type PokemonDeskObject,
+  type PokemonStairObject,
+  type PokemonRoomRuntime,
 } from "./rooms";

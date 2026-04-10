@@ -148,7 +148,7 @@ type RoomConfig = {
   stairs: StairObj[];
 };
 
-type SandboxConfig = {
+type PokemonConfig = {
   version: number;
   defaultRoomId: string;
   rooms: Record<string, RoomConfig>;
@@ -379,8 +379,8 @@ function drawRoom(
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function SandboxMapEditor({ onClose, onSaved }: Props) {
-  const [config, setConfig] = useState<SandboxConfig | null>(null);
+export function PokemonMapEditor({ onClose, onSaved }: Props) {
+  const [config, setConfig] = useState<PokemonConfig | null>(null);
   const [currentRoomId, setCurrentRoomId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -413,12 +413,12 @@ export function SandboxMapEditor({ onClose, onSaved }: Props) {
     const all: TileType[] = ["grass", ...TILE_TYPES];
     for (const tt of all) {
       const img = new Image();
-      img.src = `/tiles/${tt}.png`;
+      img.src = `/pokemon/tiles/${tt}.png`;
       img.onload = () => { tileImgsRef.current[tt] = img; render(); };
     }
     for (const skin of ["stair-to-top", "stair-to-bottom"]) {
       const img = new Image();
-      img.src = `/tiles/${skin}.png`;
+      img.src = `/pokemon/tiles/${skin}.png`;
       img.onload = () => { stairImgsRef.current[skin] = img; render(); };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -429,7 +429,7 @@ export function SandboxMapEditor({ onClose, onSaved }: Props) {
     const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
     if (!token) { setError("Non authentifié."); setLoading(false); return; }
     axiosInstance
-      .get<SandboxConfig>("/sandbox/config", { headers: { Authorization: token } })
+      .get<PokemonConfig>("/pokemon/config", { headers: { Authorization: token } })
       .then((res) => {
         setConfig(res.data);
         setCurrentRoomId(res.data.defaultRoomId);
@@ -895,7 +895,7 @@ export function SandboxMapEditor({ onClose, onSaved }: Props) {
     const token = typeof window !== "undefined" ? localStorage.getItem("userToken") : null;
     if (!token) { setError("Non authentifié."); setSaving(false); return; }
     axiosInstance
-      .put("/sandbox/config", config, {
+      .put("/pokemon/config", config, {
         headers: { Authorization: token, "Content-Type": "application/json" },
       })
       .then(() => {
@@ -1018,7 +1018,7 @@ export function SandboxMapEditor({ onClose, onSaved }: Props) {
             title={TILE_LABELS[tt]}
             className="rounded border border-border p-0.5 hover:border-primary hover:bg-soft/60"
           >
-            <img src={`/tiles/${tt}.png`} alt={TILE_LABELS[tt]} width={32} height={32} className="block w-8 h-8 rounded" />
+            <img src={`/pokemon/tiles/${tt}.png`} alt={TILE_LABELS[tt]} width={32} height={32} className="block w-8 h-8 rounded" />
           </button>
         ))}
       </div>

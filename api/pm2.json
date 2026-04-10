@@ -1,4 +1,4 @@
 {
-  "name": "acs2i-toolbox-api",
+  "name": "acs2i-game-api",
   "script": "dist/index.js"
 }

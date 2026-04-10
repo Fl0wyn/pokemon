@@ -2,10 +2,10 @@ import mongoose from "mongoose";
 import "./User";
 
 /**
- * Last known sandbox position per user per room (persisted).
+ * Last known pokemon position per user per room (persisted).
  * Together, documents for a user form the logical "array" of saved placements by room.
  */
-export type SandboxPlacementDocument = mongoose.Document & {
+export type PokemonPlacementDocument = mongoose.Document & {
   userId: mongoose.Types.ObjectId;
   roomId: string;
   x: number;
@@ -15,7 +15,7 @@ export type SandboxPlacementDocument = mongoose.Document & {
   updatedAt: Date;
 };
 
-const schema = new mongoose.Schema<SandboxPlacementDocument>(
+const schema = new mongoose.Schema<PokemonPlacementDocument>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -36,7 +36,7 @@ const schema = new mongoose.Schema<SandboxPlacementDocument>(
 
 schema.index({ userId: 1, roomId: 1 }, { unique: true });
 
-export const SandboxPlacement = mongoose.model<SandboxPlacementDocument>(
-  "SandboxPlacement",
+export const PokemonPlacement = mongoose.model<PokemonPlacementDocument>(
+  "PokemonPlacement",
   schema,
 );

@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
 /**
- * Stores the sandbox map configuration (rooms, desks, stairs).
+ * Stores the pokemon map configuration (rooms, desks, stairs).
  * A single document with key "main" holds the active config.
  */
-export type SandboxConfigDocument = mongoose.Document & {
+export type PokemonConfigDocument = mongoose.Document & {
   key: string;
   version: number;
   defaultRoomId: string;
@@ -13,7 +13,7 @@ export type SandboxConfigDocument = mongoose.Document & {
   createdAt: Date;
 };
 
-const schema = new mongoose.Schema<SandboxConfigDocument>(
+const schema = new mongoose.Schema<PokemonConfigDocument>(
   {
     key: { type: String, required: true, unique: true, default: "main" },
     version: { type: Number, required: true, default: 1 },
@@ -23,7 +23,7 @@ const schema = new mongoose.Schema<SandboxConfigDocument>(
   { timestamps: true },
 );
 
-export const SandboxConfig = mongoose.model<SandboxConfigDocument>(
-  "SandboxConfig",
+export const PokemonConfig = mongoose.model<PokemonConfigDocument>(
+  "PokemonConfig",
   schema,
 );

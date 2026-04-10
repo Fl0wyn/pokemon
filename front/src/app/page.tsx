@@ -3,6 +3,7 @@
 import AppChrome from "@/components/AppChrome";
 import { navItems } from "@/config/nav";
 import { useViewerRank } from "@/hooks/useViewerRank";
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -42,7 +43,11 @@ export default function Home() {
                 <div
                   className={`mb-3.5 flex h-9 w-9 items-center justify-center rounded-lg ${card.bg} ${card.color}`}
                 >
-                  <Icon size={20} />
+                  {card.image ? (
+                    <Image src={card.image} alt={card.label} width={20} height={20} />
+                  ) : (
+                    <Icon size={20} />
+                  )}
                 </div>
                 <div className="mb-1 text-[15px] font-bold text-brand">{card.label}</div>
                 <div className="text-[13px] text-muted">{card.description}</div>

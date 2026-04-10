@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
-import { SandboxConfig } from "../../models/SandboxConfig";
+import { PokemonConfig } from "../../models/PokemonConfig";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** Layout slice used for bounds / spawn (legacy shape). */
-export type SandboxRoomDef = {
+export type PokemonRoomDef = {
   halfW: number;
   halfD: number;
   defaultSpawn: { x: number; z: number };
@@ -60,7 +60,7 @@ export const TILE_SIZES: Record<TileType, { width: number; depth: number }> = {
 /** Tile types that block movement (same collision as old "desk"). */
 export const SOLID_TILE_TYPES = new Set<TileType>(["rock", "tree", "water", "grass-tall-water-1", "grass-tall-water-2", "sand-tree", "house", "sand-castle"]);
 
-export type SandboxDeskObject = {
+export type PokemonDeskObject = {
   type: "tile";
   tileType: TileType;
   x: number;
@@ -69,7 +69,7 @@ export type SandboxDeskObject = {
   depth: number;
 };
 
-export type SandboxStairObject = {
+export type PokemonStairObject = {
   id: string;
   x: number;
   z: number;
@@ -81,10 +81,10 @@ export type SandboxStairObject = {
   skin?: string;
 };
 
-export type SandboxRoomRuntime = SandboxRoomDef & {
+export type PokemonRoomRuntime = PokemonRoomDef & {
   label?: string;
-  objects: SandboxDeskObject[];
-  stairs: SandboxStairObject[];
+  objects: PokemonDeskObject[];
+  stairs: PokemonStairObject[];
 };
 
 export type RawConfig = {
@@ -116,7 +116,7 @@ function asNum(v: unknown, field: string): number {
 
 const VALID_TILE_TYPES: TileType[] = ["rock", "tree", "water", "grass", "flower", "sand", "water-bridge", "water-bridge-0", "sand-water-1", "sand-water-2", "sand-water-3", "sand-water-4", "sand-water-a", "sand-water-b", "sand-water-c", "sand-water-d", "water-bridge-1", "water-bridge-2", "water-bridge-3", "water-bridge-4", "water-bridge-a", "water-bridge-b", "water-bridge-c", "water-bridge-d", "grass-water-1", "grass-water-2", "grass-water-3", "grass-water-4", "grass-water-5", "grass-water-6", "grass-water-a", "grass-water-b", "grass-tall-water-1", "grass-tall-water-2", "grass-corner", "rock-water", "sand-castle", "sand-tree", "house", "chair"];
 
-function parseTile(o: unknown, idx: number): SandboxDeskObject {
+function parseTile(o: unknown, idx: number): PokemonDeskObject {
   if (!o || typeof o !== "object") throw new Error(`objects[${idx}] invalide`);
   const r = o as Record<string, unknown>;
   // Accept legacy "desk" type as "rock" for backwards-compatibility.
@@ -137,7 +137,7 @@ function parseTile(o: unknown, idx: number): SandboxDeskObject {
   };
 }
 
-function parseStair(o: unknown, idx: number): SandboxStairObject {
+function parseStair(o: unknown, idx: number): PokemonStairObject {
   if (!o || typeof o !== "object") throw new Error(`stairs[${idx}] invalide`);
   const r = o as Record<string, unknown>;
   const spawn = r.spawnOnArrival as Record<string, unknown> | undefined;
@@ -161,13 +161,13 @@ function parseStair(o: unknown, idx: number): SandboxStairObject {
 
 export function parseConfig(raw: RawConfig): {
   defaultRoomId: string;
-  rooms: Record<string, SandboxRoomRuntime>;
+  rooms: Record<string, PokemonRoomRuntime>;
 } {
   if (!raw || raw.version !== 1) throw new Error("version 1 requise");
   if (typeof raw.defaultRoomId !== "string" || !raw.defaultRoomId) {
     throw new Error("defaultRoomId manquant");
   }
-  const rooms: Record<string, SandboxRoomRuntime> = {};
+  const rooms: Record<string, PokemonRoomRuntime> = {};
   for (const [id, room] of Object.entries(raw.rooms || {})) {
     const objects = (room.objects ?? []).map((o, i) => parseTile(o, i));
     const stairs = (room.stairs ?? []).map((s, i) => parseStair(s, i));
@@ -202,14 +202,14 @@ export function parseConfig(raw: RawConfig): {
 // ─── Seed from JSON file (used for first boot / migration) ───────────────────
 
 function resolveJsonConfigPath(): string | null {
-  const fromDist = path.join(__dirname, "sandboxRooms.config.json");
+  const fromDist = path.join(__dirname, "pokemonRooms.config.json");
   if (fs.existsSync(fromDist)) return fromDist;
   const fromSrc = path.join(
     process.cwd(),
     "src",
     "services",
-    "sandboxService",
-    "sandboxRooms.config.json",
+    "pokemonService",
+    "pokemonRooms.config.json",
   );
   if (fs.existsSync(fromSrc)) return fromSrc;
   return null;
@@ -229,7 +229,7 @@ function readJsonConfig(): RawConfig | null {
 
 // Bootstrap from JSON synchronously so the service is usable before DB is ready.
 const _jsonSeed = readJsonConfig();
-if (!_jsonSeed) throw new Error("sandboxRooms.config.json introuvable au démarrage.");
+if (!_jsonSeed) throw new Error("pokemonRooms.config.json introuvable au démarrage.");
 
 let _raw: RawConfig = _jsonSeed;
 let _parsed = parseConfig(_raw);
@@ -237,10 +237,10 @@ let _parsed = parseConfig(_raw);
 function applyRaw(raw: RawConfig): void {
   _parsed = parseConfig(raw);
   _raw = raw;
-  // Sync SANDBOX_ROOMS in place so existing references stay valid.
-  for (const key of Object.keys(SANDBOX_ROOMS)) delete SANDBOX_ROOMS[key];
+  // Sync POKEMON_ROOMS in place so existing references stay valid.
+  for (const key of Object.keys(POKEMON_ROOMS)) delete POKEMON_ROOMS[key];
   for (const [id, r] of Object.entries(_parsed.rooms)) {
-    SANDBOX_ROOMS[id] = { halfW: r.halfW, halfD: r.halfD, defaultSpawn: r.defaultSpawn };
+    POKEMON_ROOMS[id] = { halfW: r.halfW, halfD: r.halfD, defaultSpawn: r.defaultSpawn };
   }
 }
 
@@ -281,25 +281,25 @@ function hasInvertedStairSkins(rooms: RawConfig["rooms"]): boolean {
 }
 
 
-export async function initSandboxConfigFromDb(): Promise<void> {
-  const doc = await SandboxConfig.findOne({ key: DB_KEY }).lean();
+export async function initPokemonConfigFromDb(): Promise<void> {
+  const doc = await PokemonConfig.findOne({ key: DB_KEY }).lean();
   if (doc) {
     const dbRooms = doc.rooms as RawConfig["rooms"];
     // If DB still has legacy "desk" objects or stairs without skin, reseed from JSON file.
     if (hasLegacyDeskObjects(dbRooms) || hasStairsWithoutSkin(dbRooms)) {
-      console.log("[sandbox] Migration BDD détectée — reseed depuis le JSON.");
-      await SandboxConfig.findOneAndUpdate(
+      console.log("[pokemon] Migration BDD détectée — reseed depuis le JSON.");
+      await PokemonConfig.findOneAndUpdate(
         { key: DB_KEY },
         { $set: { version: _raw.version, defaultRoomId: _raw.defaultRoomId, rooms: _raw.rooms } },
         { upsert: true },
       );
       applyRaw(_raw);
-      console.log("[sandbox] Config mise à jour depuis le JSON.");
+      console.log("[pokemon] Config mise à jour depuis le JSON.");
       return;
     }
     let rooms = dbRooms;
     if (hasInvertedStairSkins(rooms)) {
-      console.log("[sandbox] Migration escaliers inversés — correction des skins/positions.");
+      console.log("[pokemon] Migration escaliers inversés — correction des skins/positions.");
       // Patch only stair skin, z, and spawnOnArrival from JSON reference, keep objects intact
       const patchedRooms: RawConfig["rooms"] = {};
       for (const [roomId, room] of Object.entries(rooms)) {
@@ -319,12 +319,12 @@ export async function initSandboxConfigFromDb(): Promise<void> {
         patchedRooms[roomId] = { ...room, stairs: patchedStairs };
       }
       rooms = patchedRooms;
-      await SandboxConfig.findOneAndUpdate(
+      await PokemonConfig.findOneAndUpdate(
         { key: DB_KEY },
         { $set: { rooms } },
         { upsert: true },
       );
-      console.log("[sandbox] Escaliers corrigés en BDD.");
+      console.log("[pokemon] Escaliers corrigés en BDD.");
     }
     const raw: RawConfig = {
       version: doc.version,
@@ -332,21 +332,21 @@ export async function initSandboxConfigFromDb(): Promise<void> {
       rooms,
     };
     applyRaw(raw);
-    console.log("[sandbox] Config chargée depuis la BDD.");
+    console.log("[pokemon] Config chargée depuis la BDD.");
   } else {
     // First boot: seed DB from JSON file.
-    await SandboxConfig.create({
+    await PokemonConfig.create({
       key: DB_KEY,
       version: _raw.version,
       defaultRoomId: _raw.defaultRoomId,
       rooms: _raw.rooms,
     });
-    console.log("[sandbox] Config initialisée en BDD depuis le fichier JSON.");
+    console.log("[pokemon] Config initialisée en BDD depuis le fichier JSON.");
   }
 }
 
 /** Returns the raw config currently in memory. */
-export function getRawSandboxConfig(): RawConfig {
+export function getRawPokemonConfig(): RawConfig {
   return _raw;
 }
 
@@ -355,7 +355,7 @@ export function getRawSandboxConfig(): RawConfig {
  * Returns a map of roomId → old spawn position for rooms whose spawn changed.
  * Throws on validation error.
  */
-export async function saveSandboxConfig(
+export async function savePokemonConfig(
   raw: RawConfig,
 ): Promise<Record<string, { x: number; z: number }>> {
   // Validate first — throws if invalid.
@@ -367,7 +367,7 @@ export async function saveSandboxConfig(
     changedSpawns[id] = { x: newRoom.spawn.x, z: newRoom.spawn.z };
   }
 
-  await SandboxConfig.findOneAndUpdate(
+  await PokemonConfig.findOneAndUpdate(
     { key: DB_KEY },
     { $set: { version: raw.version, defaultRoomId: raw.defaultRoomId, rooms: raw.rooms } },
     { upsert: true },
@@ -378,31 +378,31 @@ export async function saveSandboxConfig(
 
 // ─── Public read API ─────────────────────────────────────────────────────────
 
-export let DEFAULT_SANDBOX_ROOM_ID = _parsed.defaultRoomId;
+export let DEFAULT_POKEMON_ROOM_ID = _parsed.defaultRoomId;
 
 /** Minimal map for clamp / spawn (legacy shape). */
-export const SANDBOX_ROOMS: Record<string, SandboxRoomDef> = Object.fromEntries(
+export const POKEMON_ROOMS: Record<string, PokemonRoomDef> = Object.fromEntries(
   Object.entries(_parsed.rooms).map(([id, r]) => [
     id,
     { halfW: r.halfW, halfD: r.halfD, defaultSpawn: r.defaultSpawn },
   ]),
 );
 
-export function getSandboxRoom(roomId: string): SandboxRoomDef | null {
-  return SANDBOX_ROOMS[roomId] ?? null;
+export function getPokemonRoom(roomId: string): PokemonRoomDef | null {
+  return POKEMON_ROOMS[roomId] ?? null;
 }
 
-export function getSandboxRoomRuntime(roomId: string): SandboxRoomRuntime | null {
+export function getPokemonRoomRuntime(roomId: string): PokemonRoomRuntime | null {
   return _parsed.rooms[roomId] ?? null;
 }
 
-export function listSandboxRoomIds(): string[] {
+export function listPokemonRoomIds(): string[] {
   return Object.keys(_parsed.rooms);
 }
 
 /** Payload for clients (Three.js + interaction). */
 export function getClientRoomScene(roomId: string): {
-  objects: (SandboxDeskObject & { solid: boolean })[];
+  objects: (PokemonDeskObject & { solid: boolean })[];
   stairs: Array<{
     id: string;
     x: number;
@@ -430,7 +430,7 @@ export function getClientRoomScene(roomId: string): {
   };
 }
 
-export function findStairDef(roomId: string, stairId: string): SandboxStairObject | null {
+export function findStairDef(roomId: string, stairId: string): PokemonStairObject | null {
   const r = _parsed.rooms[roomId];
   if (!r) return null;
   return r.stairs.find((s) => s.id === stairId) ?? null;
@@ -443,7 +443,7 @@ export function canUseStairAtPosition(
   stairId: string,
   px: number,
   pz: number,
-): SandboxStairObject | null {
+): PokemonStairObject | null {
   const st = findStairDef(roomId, stairId);
   if (!st) return null;
   const dx = px - st.x;

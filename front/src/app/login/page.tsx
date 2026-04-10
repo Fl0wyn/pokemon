@@ -136,7 +136,7 @@ function LoginContent() {
     <div className="min-h-screen bg-surface flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-brand mb-1">Acs2i - Toolbox</h1>
+          <h1 className="text-2xl font-bold text-brand mb-1">Acs2i - Game</h1>
           <p className="text-sm text-subtle">{subtitles[step]}</p>
         </div>
 

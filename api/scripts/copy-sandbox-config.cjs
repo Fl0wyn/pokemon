@@ -6,15 +6,15 @@ const src = path.join(
   root,
   "src",
   "services",
-  "sandboxService",
-  "sandboxRooms.config.json",
+  "pokemonService",
+  "pokemonRooms.config.json",
 );
 const dest = path.join(
   root,
   "dist",
   "services",
-  "sandboxService",
-  "sandboxRooms.config.json",
+  "pokemonService",
+  "pokemonRooms.config.json",
 );
 
 if (!fs.existsSync(src)) {
@@ -23,4 +23,4 @@ if (!fs.existsSync(src)) {
 }
 fs.mkdirSync(path.dirname(dest), { recursive: true });
 fs.copyFileSync(src, dest);
-console.log("Copied sandboxRooms.config.json → dist");
+console.log("Copied pokemonRooms.config.json → dist");
