@@ -1,0 +1,14 @@
+deployments:
+  environmentMapping:
+    development:
+      - "dev"
+    testing:
+      - "test"
+    staging:
+      - "preprod"
+      - "preprod-api"
+      - "staging"
+    production:
+      - "production"
+      - "production-api"
+      - "prod-api"

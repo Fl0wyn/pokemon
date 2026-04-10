@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #1a1a2e;
+  --color-brand-hover: #252540;
+  --color-brand-active: #2d2d4e;
+  --color-sidebar: #0f172a;
+  --color-sidebar-hover: #1e293b;
+  --color-sidebar-active: #3b82f6;
+  --color-sidebar-icon: #94a3b8;
+  --color-soft: #f0f1f5;
+  --color-surface: #f5f6f8;
+  --color-card: #ffffff;
+  --color-border: #e8eaed;
+  --color-muted: #6b7280;
+  --color-subtle: #9ca3af;
+  --color-sidebar-text: #cbd5e1;
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-brand);
+  margin: 0;
+}
+
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  animation: rotating 0.8s linear infinite;
+}

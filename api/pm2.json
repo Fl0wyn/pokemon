@@ -1,0 +1,4 @@
+{
+  "name": "acs2i-toolbox-api",
+  "script": "dist/index.js"
+}

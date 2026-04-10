@@ -1,0 +1,143 @@
+name: 🚀 Deploy Web App
+
+on:
+  push:
+    branches:
+      - preprod
+      - prod
+    paths-ignore:
+      - "docs/**"
+      - ".github/**"
+
+jobs:
+  deploy-preprod:
+    if: github.ref == 'refs/heads/preprod'
+    runs-on: preprod
+
+    permissions:
+      deployments: write
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_KEY }}
+          repositories: acs2i-toolbox-api
+          owner: ${{ github.repository_owner }}
+
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: preprod
+          clean: false
+          persist-credentials: false
+
+      - uses: chrnorm/deployment-action@v2
+        name: 📋 Create GitHub deployment
+        id: deployment
+        with:
+          token: "${{ github.token }}"
+          environment: preprod
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🏗️ Build
+        run: npm run build
+
+      - name: 📦 Install pm2-agent dependencies
+        run: npm install
+        working-directory: scripts/pm2-agent
+
+      - name: 🤖 Build pm2-agent
+        run: npm run build
+        working-directory: scripts/pm2-agent
+
+      - name: 🔄 Restart acs2i-toolbox-api service with PM2
+        run: pm2 restart acs2i-toolbox-api
+
+      - name: ✅ Update deployment status (success)
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: "${{ github.token }}"
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: "success"
+
+      - name: ❌ Update deployment status (failure)
+        if: failure()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: "${{ github.token }}"
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: "failure"
+
+  deploy-prod:
+    if: github.ref == 'refs/heads/prod'
+    runs-on: prod
+
+    permissions:
+      deployments: write
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_KEY }}
+          repositories: acs2i-toolbox-api
+          owner: ${{ github.repository_owner }}
+
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: prod
+          clean: false
+          persist-credentials: false
+
+      - uses: chrnorm/deployment-action@v2
+        name: 📋 Create GitHub deployment
+        id: deployment
+        with:
+          token: "${{ github.token }}"
+          environment: prod
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🏗️ Build
+        run: npm run build
+
+      - name: 📦 Install pm2-agent dependencies
+        run: npm install
+        working-directory: scripts/pm2-agent
+
+      - name: 🤖 Build pm2-agent
+        run: npm run build
+        working-directory: scripts/pm2-agent
+
+      - name: 🔄 Restart acs2i-toolbox-api service with PM2
+        run: pm2 restart acs2i-toolbox-api
+
+      - name: ✅ Update deployment status (success)
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: "${{ github.token }}"
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: "success"
+
+      - name: ❌ Update deployment status (failure)
+        if: failure()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: "${{ github.token }}"
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: "failure"
