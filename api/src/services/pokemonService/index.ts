@@ -34,10 +34,10 @@ import { randomMonsterName } from "./monsterGeneratorService";
 
 const AVATAR_RADIUS = 0.3;
 const EXTRA_BOTTOM = 2; // extra rows visible/walkable below the map boundary
-const EGG_RESPAWN_MS = 5000;
+const EGG_RESPAWN_MS = 2000;
 const EGG_PICK_RADIUS = 1.1;
 const EGG_RADIUS = 0.35;
-const MONSTER_RESPAWN_MS = 8000;
+const MONSTER_RESPAWN_MS = 5000;
 const MONSTER_PICK_RADIUS = 1.1;
 const MONSTER_RADIUS = 0.35;
 
@@ -69,6 +69,7 @@ type ScoreRow = {
   eggs: number;
   unique: number;
   svgs: string[];
+  catches: Record<string, number>;
 };
 
 function normalizeRoomId(raw: unknown): string {
@@ -261,14 +262,22 @@ class PokemonService implements UserSocketExtension {
       { $limit: 20 },
     ]);
     if (rows.length === 0) return [];
-    const users = await User.find({
-      _id: { $in: rows.map((r) => r._id) },
-    })
-      .select("email")
-      .lean();
+    const userIds = rows.map((r) => r._id);
+    const [users, catchDocs] = await Promise.all([
+      User.find({ _id: { $in: userIds } }).select("email").lean(),
+      PokemonMonsterCatch.find({ userId: { $in: userIds } }).select("userId name").lean(),
+    ]);
     const emailById = new Map<string, string>();
     for (const u of users) {
       emailById.set(String(u._id), typeof u.email === "string" ? u.email : "");
+    }
+    const catchesByUser = new Map<string, Record<string, number>>();
+    for (const doc of catchDocs) {
+      const uid = String(doc.userId);
+      const name = doc.name as string;
+      if (!catchesByUser.has(uid)) catchesByUser.set(uid, {});
+      const c = catchesByUser.get(uid)!;
+      c[name] = (c[name] ?? 0) + 1;
     }
     return rows.map((r) => ({
       userId: String(r._id),
@@ -276,6 +285,7 @@ class PokemonService implements UserSocketExtension {
       eggs: r.eggs,
       unique: Array.isArray(r.names) ? r.names.length : 0,
       svgs: [],
+      catches: catchesByUser.get(String(r._id)) ?? {},
     }));
   }
 

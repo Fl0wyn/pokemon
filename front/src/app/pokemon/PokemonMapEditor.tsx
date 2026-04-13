@@ -266,36 +266,6 @@ function drawRoom(
 
 
 
-  // stairs
-  room.stairs.forEach((st, idx) => {
-    const isSel = selectedStairIdx === idx;
-    const isDragging = dragTarget?.type === "stair" && dragTarget.idx === idx;
-    const drawX = isDragging && dragPreview ? dragPreview.x : st.x;
-    const drawZ = isDragging && dragPreview ? dragPreview.z : st.z;
-
-    const center = tw(drawX, drawZ);
-    const STAIR_R = 12;
-    const skin = st.skin ?? "stair-to-top";
-    const label = skin === "stair-to-bottom" ? "S↓" : "S↑";
-
-    ctx.fillStyle = isDragging
-      ? "rgba(139,92,246,0.55)"
-      : isSel
-      ? "rgba(139,92,246,0.5)"
-      : "rgba(139,92,246,0.25)";
-    ctx.beginPath();
-    ctx.arc(center.cx, center.cy, STAIR_R, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = isSel ? "#f59e0b" : "#7c3aed";
-    ctx.lineWidth = isSel ? 2.5 : 1.5;
-    ctx.stroke();
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 9px system-ui";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, center.cx, center.cy);
-  });
-
   // tiles
   room.objects.forEach((d, idx) => {
     if (d.type !== "tile") return;
@@ -322,6 +292,88 @@ function drawRoom(
       ctx.lineWidth = isSel ? 2.5 : 1.5;
       ctx.strokeRect(tl2.cx, tl2.cy, pw, ph);
     }
+  });
+
+  // escaliers (dessinés après les tiles)
+  room.stairs.forEach((st, idx) => {
+    const isSel = selectedStairIdx === idx;
+    const isDragging = dragTarget?.type === "stair" && dragTarget.idx === idx;
+    const drawX = isDragging && dragPreview ? dragPreview.x : st.x;
+    const drawZ = isDragging && dragPreview ? dragPreview.z : st.z;
+
+    const skin = st.skin ?? "stair-to-top";
+    const tl = tw(drawX - st.width / 2, drawZ - st.depth / 2);
+    const br = tw(drawX + st.width / 2, drawZ + st.depth / 2);
+    const pw = br.cx - tl.cx;
+    const ph = br.cy - tl.cy;
+
+    const img = stairImgs[skin];
+    if (img) {
+      if (isDragging) ctx.globalAlpha = 0.6;
+      ctx.drawImage(img, tl.cx, tl.cy, pw, ph);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = isDragging ? "rgba(139,92,246,0.55)" : "rgba(139,92,246,0.25)";
+      ctx.fillRect(tl.cx, tl.cy, pw, ph);
+    }
+
+    if (isSel) {
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(tl.cx, tl.cy, pw, ph);
+    }
+  });
+
+  // cases violettes devant les escaliers (dessinées après les tiles pour laisser voir la tile en dessous)
+  room.stairs.forEach((st) => {
+    const isDragging = dragTarget?.type === "stair" && dragTarget.idx === room.stairs.indexOf(st);
+    const drawX = isDragging && dragPreview ? dragPreview.x : st.x;
+    const drawZ = isDragging && dragPreview ? dragPreview.z : st.z;
+    const skin = st.skin ?? "stair-to-top";
+    const markerZ = skin === "stair-to-bottom" ? drawZ - 1 : drawZ + 1;
+    const mtl = tw(drawX - 0.5, markerZ - 0.5);
+    const mbr = tw(drawX + 0.5, markerZ + 0.5);
+    const mw = mbr.cx - mtl.cx;
+    const mh = mbr.cy - mtl.cy;
+    const cx = mtl.cx + mw / 2;
+    const cy = mtl.cy + mh / 2;
+
+    ctx.fillStyle = "rgba(155,48,255,0.5)";
+    ctx.fillRect(mtl.cx, mtl.cy, mw, mh);
+
+    // flèche s'éloignant de l'escalier
+    // stair-to-bottom est en bas → case violette est au-dessus → flèche vers le haut
+    // stair-to-top est en haut → case violette est en dessous → flèche vers le bas
+    const arrowUp = skin === "stair-to-top";
+    const aw = mw * 0.25;
+    const ah = mh * 0.55;
+    const stemW = aw * 0.45;
+    const headH = ah * 0.45;
+    const stemH = ah - headH;
+
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.beginPath();
+    if (arrowUp) {
+      // pointe vers le haut
+      ctx.moveTo(cx, cy - ah / 2);               // sommet pointe
+      ctx.lineTo(cx + aw / 2, cy - ah / 2 + headH); // droite tête
+      ctx.lineTo(cx + stemW / 2, cy - ah / 2 + headH); // épaule droite
+      ctx.lineTo(cx + stemW / 2, cy + ah / 2);   // bas droite
+      ctx.lineTo(cx - stemW / 2, cy + ah / 2);   // bas gauche
+      ctx.lineTo(cx - stemW / 2, cy - ah / 2 + headH); // épaule gauche
+      ctx.lineTo(cx - aw / 2, cy - ah / 2 + headH); // gauche tête
+    } else {
+      // pointe vers le bas
+      ctx.moveTo(cx, cy + ah / 2);               // sommet pointe
+      ctx.lineTo(cx + aw / 2, cy + ah / 2 - headH); // droite tête
+      ctx.lineTo(cx + stemW / 2, cy + ah / 2 - headH); // épaule droite
+      ctx.lineTo(cx + stemW / 2, cy - ah / 2);   // haut droite
+      ctx.lineTo(cx - stemW / 2, cy - ah / 2);   // haut gauche
+      ctx.lineTo(cx - stemW / 2, cy + ah / 2 - headH); // épaule gauche
+      ctx.lineTo(cx - aw / 2, cy + ah / 2 - headH); // gauche tête
+    }
+    ctx.closePath();
+    ctx.fill();
   });
 
   // spawn (dessiné après les tiles — uniquement sur la map par défaut)

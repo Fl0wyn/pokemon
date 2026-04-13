@@ -79,6 +79,7 @@ type HallOfFameRow = {
   email: string;
   eggs: number;
   unique: number;
+  catches?: Record<string, number>;
 };
 
 const MONSTER_TOTAL = 151;
@@ -222,6 +223,7 @@ export default function PokemonCanvas() {
   const [myCatches, setMyCatches] = useState<Record<string, number>>({});
   const [hallOfFame, setHallOfFame] = useState<HallOfFameRow[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [viewingRow, setViewingRow] = useState<HallOfFameRow | null>(null);
   const [editingMap, setEditingMap] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [mapAspect, setMapAspect] = useState<number | null>(null);
@@ -445,6 +447,19 @@ export default function PokemonCanvas() {
           mat.map = tex;
           mat.needsUpdate = true;
         });
+
+        // Case violette devant l'escalier (visible uniquement en mode édition)
+        if (editingMap) {
+          const markerGeo = new THREE.PlaneGeometry(1, 1);
+          const markerMat = new THREE.MeshBasicMaterial({ color: 0x9b30ff, transparent: true, opacity: 0.5, depthWrite: false });
+          const markerMesh = new THREE.Mesh(markerGeo, markerMat);
+          markerMesh.rotation.x = -Math.PI / 2;
+          const markerZ = stairSkin === "stair-to-bottom" ? st.z - 1 : st.z + 1;
+          markerMesh.position.set(st.x, 0.023, markerZ);
+          markerMesh.renderOrder = 2;
+          furniture.add(markerMesh);
+          stairMeshes.push(markerMesh);
+        }
       }
     }
 
@@ -460,7 +475,7 @@ export default function PokemonCanvas() {
       monsterMeshes.length = 0;
       if (!monsterState || monsterState.roomId !== roomIdRef.current) return;
 
-      const geo = new THREE.PlaneGeometry(1.2, 1.2);
+      const geo = new THREE.PlaneGeometry(1.6, 1.6);
       const mat = new THREE.MeshBasicMaterial({
         transparent: true,
         depthWrite: false,
@@ -700,8 +715,9 @@ export default function PokemonCanvas() {
 
     let raf = 0;
     let lastEmit = 0;
-    // -1 = gauche, +1 = droite, 0 = dernier connu (défaut droite)
-    let pokeballDir = 1;
+    // position pokéball : 3h (droite), 9h (gauche), 0h (haut), 6h (bas)
+    let pokeballOffsetX = AVATAR_RADIUS + 0.03; // défaut : droite
+    let pokeballOffsetZ = 0;
 
     const tick = () => {
       raf = requestAnimationFrame(tick);
@@ -717,7 +733,12 @@ export default function PokemonCanvas() {
       if (keys.has("KeyS") || keys.has("ArrowDown")) dz += 1;
       if (keys.has("KeyA") || keys.has("ArrowLeft")) dx -= 1;
       if (keys.has("KeyD") || keys.has("ArrowRight")) dx += 1;
-      if (dx !== 0) pokeballDir = dx > 0 ? 1 : -1;
+      // La dernière direction pressée détermine la position de la pokéball (0/3/6/9h)
+      const off = AVATAR_RADIUS + 0.03;
+      if (keys.has("ArrowRight") || keys.has("KeyD")) { pokeballOffsetX = off;  pokeballOffsetZ = 0; }
+      else if (keys.has("ArrowLeft")  || keys.has("KeyA")) { pokeballOffsetX = -off; pokeballOffsetZ = 0; }
+      else if (keys.has("ArrowDown")  || keys.has("KeyS")) { pokeballOffsetX = 0;    pokeballOffsetZ = off; }
+      else if (keys.has("ArrowUp")    || keys.has("KeyW")) { pokeballOffsetX = 0;    pokeballOffsetZ = -off; }
       const len = Math.hypot(dx, dz);
       if (len > 0) {
         dx /= len;
@@ -801,7 +822,10 @@ export default function PokemonCanvas() {
           g.position.set(localPos.x, 0, localPos.z);
           // Mise à jour position pokéball selon direction
           const pb = g.getObjectByName("pokeball");
-          if (pb) pb.position.x = pokeballDir * (AVATAR_RADIUS + 0.03);
+          if (pb) {
+            pb.position.x = pokeballOffsetX;
+            pb.position.z = pokeballOffsetZ;
+          }
         } else {
           const o = othersPos.get(uid);
           if (o) g.position.set(o.x, 0, o.z);
@@ -882,12 +906,6 @@ export default function PokemonCanvas() {
               Editer la map
             </button>
           )}
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="rounded-md border border-border px-3 py-1.5 text-xs text-muted hover:bg-soft/60 hover:text-foreground"
-          >
-            Mon Pokédex ({myScore}/{MONSTER_TOTAL})
-          </button>
         </div>
       </div>}
 
@@ -900,6 +918,7 @@ export default function PokemonCanvas() {
                 <th className="px-2 py-2 font-medium text-muted">Joueur</th>
                 <th className="px-2 py-2 font-medium text-muted">Uniques</th>
                 <th className="px-2 py-2 font-medium text-muted">Total</th>
+                <th className="px-2 py-2 font-medium text-muted">Pokédex</th>
               </tr>
             </thead>
             <tbody>
@@ -916,6 +935,14 @@ export default function PokemonCanvas() {
                     <td className="px-2 py-2">{row.email || row.userId}</td>
                     <td className="px-2 py-2 font-medium">{row.unique}/{MONSTER_TOTAL}</td>
                     <td className="px-2 py-2 text-muted">{row.eggs}</td>
+                    <td className="px-2 py-2">
+                      <button
+                        onClick={() => { setViewingRow(row); setDrawerOpen(true); }}
+                        className="rounded border border-border px-2 py-0.5 text-xs text-muted hover:bg-soft/60 hover:text-foreground"
+                      >
+                        Voir
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -925,58 +952,62 @@ export default function PokemonCanvas() {
       </div>}
 
       {/* Pokédex drawer */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          {/* backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setDrawerOpen(false)}
-          />
-          <div className="relative z-10 flex h-full w-full max-w-md flex-col bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <span className="font-semibold text-foreground">
-                Pokédex — {myScore}/{MONSTER_TOTAL}
-              </span>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="text-muted hover:text-foreground text-lg leading-none"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3">
-              <div className="grid grid-cols-4 gap-2">
-                {MONSTER_NAMES.map((name) => {
-                  const count = myCatches[name] ?? 0;
-                  const caught = count > 0;
-                  return (
-                    <div
-                      key={name}
-                      className="relative flex flex-col items-center rounded-lg border border-border p-1"
-                      style={{ opacity: caught ? 1 : 0.3 }}
-                    >
-                      <img
-                        src={`/pokemon/monsters/${encodeURIComponent(name)}.png`}
-                        alt={name}
-                        className="w-12 h-12 object-contain"
-                        style={{ filter: caught ? "none" : "grayscale(1)" }}
-                      />
-                      <span className="mt-1 text-center text-[10px] leading-tight text-foreground wrap-break-word w-full">
-                        {name}
-                      </span>
-                      {count > 1 && (
-                        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-bold text-white">
-                          {count}
+      {drawerOpen && (() => {
+        const catches = viewingRow ? (viewingRow.catches ?? {}) : myCatches;
+        const score = viewingRow ? viewingRow.unique : myScore;
+        const label = viewingRow ? (viewingRow.email || viewingRow.userId) : "Mon Pokédex";
+        return (
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setDrawerOpen(false)}
+            />
+            <div className="relative z-10 flex h-full w-full max-w-md flex-col bg-white shadow-xl">
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <span className="font-semibold text-foreground">
+                  {label} — {score}/{MONSTER_TOTAL}
+                </span>
+                <button
+                  onClick={() => setDrawerOpen(false)}
+                  className="text-muted hover:text-foreground text-lg leading-none"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3">
+                <div className="grid grid-cols-4 gap-2">
+                  {MONSTER_NAMES.map((name) => {
+                    const count = catches[name] ?? 0;
+                    const caught = count > 0;
+                    return (
+                      <div
+                        key={name}
+                        className="relative flex flex-col items-center rounded-lg border border-border p-1"
+                        style={{ opacity: caught ? 1 : 0.3 }}
+                      >
+                        <img
+                          src={`/pokemon/monsters/${encodeURIComponent(name)}.png`}
+                          alt={name}
+                          className="w-12 h-12 object-contain"
+                          style={{ filter: caught ? "none" : "grayscale(1)" }}
+                        />
+                        <span className="mt-1 text-center text-[10px] leading-tight text-foreground wrap-break-word w-full">
+                          {name}
                         </span>
-                      )}
-                    </div>
-                  );
-                })}
+                        {count > 1 && (
+                          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-bold text-white">
+                            {count}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
